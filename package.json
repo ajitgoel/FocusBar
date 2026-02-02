@@ -1,0 +1,125 @@
+{
+  "name": "15min-tracker",
+  "version": "1.0.0",
+  "description": "Track your work in 15-minute increments - Beautiful menu bar app",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "npm run build-mac",
+    "build-mac": "electron-builder --mac",
+    "build-mac-arm": "electron-builder --mac --arm64",
+    "build-win": "electron-builder --win",
+    "build-all": "electron-builder --mac --win",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "productivity",
+    "timer",
+    "pomodoro",
+    "focus",
+    "macos-menu-bar"
+  ],
+  "author": {
+    "name": "15-Minute Tracker",
+    "email": "support@example.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0"
+  },
+  "build": {
+    "appId": "com.fifteenmin.tracker",
+    "productName": "15-Minute Tracker",
+    "copyright": "Copyright © 2024",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "settings.html",
+      "settings.js",
+      "styles.css",
+      "settings.css",
+      "icons/**/*",
+      "node_modules/electron-store/**/*"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "icons/icon.icns",
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "15-Minute Tracker",
+      "backgroundColor": "#f5f5f7",
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 130,
+          "y": 190
+        },
+        {
+          "x": 410,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "15-Minute Tracker"
+    }
+  }
+}

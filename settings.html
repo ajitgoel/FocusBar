@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self';">
+  <title>Settings - 15-Minute Tracker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f7;
+      --bg-tertiary: #e8e8ed;
+      --text-primary: #1d1d1f;
+      --text-secondary: #86868b;
+      --accent-blue: #007aff;
+      --accent-orange: #ff9500;
+      --accent-green: #34c759;
+      --accent-red: #ff3b30;
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1c1c1e;
+        --bg-secondary: #2c2c2e;
+        --bg-tertiary: #3a3a3c;
+        --text-primary: #ffffff;
+        --text-secondary: #8e8e93;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    header {
+      margin-bottom: 32px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+
+    .section {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 16px;
+      border-left: 4px solid var(--accent-blue);
+    }
+
+    .card:last-child {
+      margin-bottom: 0;
+    }
+
+    .card.warning {
+      border-left-color: var(--accent-orange);
+    }
+
+    .card.danger {
+      border-left-color: var(--accent-red);
+    }
+
+    .card h3 {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .instructions {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin: 12px 0;
+      padding-left: 20px;
+    }
+
+    .instructions li {
+      margin-bottom: 6px;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .btn-danger {
+      background: var(--accent-red);
+    }
+
+    .file-input-wrapper {
+      margin: 16px 0;
+    }
+
+    .file-input {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      border: 2px dashed var(--bg-tertiary);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--accent-blue);
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-message {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      display: none;
+    }
+
+    .status-message.success {
+      display: block;
+      background: rgba(52, 199, 89, 0.1);
+      color: var(--accent-green);
+      border-left: 3px solid var(--accent-green);
+    }
+
+    .status-message.error {
+      display: block;
+      background: rgba(255, 59, 48, 0.1);
+      color: var(--accent-red);
+      border-left: 3px solid var(--accent-red);
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Settings</h1>
+      <div class="subtitle">Manage your data and preferences</div>
+    </header>
+
+    <div class="section">
+      <div class="section-title">Data Management</div>
+
+      <div class="card">
+        <h3>💾 Export Tasks</h3>
+        <p>Download all your tasks and session history as a JSON file for backup.</p>
+        <ol class="instructions">
+          <li>Click the button below</li>
+          <li>Choose where to save the backup file</li>
+          <li>Keep this file safe!</li>
+        </ol>
+        <button id="btn-export" class="btn">Download Backup</button>
+      </div>
+
+      <div class="card warning">
+        <h3>📤 Import Tasks</h3>
+        <p>Restore your data from a previously exported JSON file.</p>
+        <ol class="instructions">
+          <li>Select your backup file</li>
+          <li>Click Import to restore</li>
+          <li>This will replace all current data</li>
+        </ol>
+        <div class="file-input-wrapper">
+          <input type="file" id="import-file" accept=".json" class="file-input">
+        </div>
+        <button id="btn-import" class="btn">Import Data</button>
+        <div id="import-status" class="status-message"></div>
+      </div>
+
+      <div class="card danger">
+        <h3>🗑 Clear All Data</h3>
+        <p>Delete all tasks and reset the app to default state. This cannot be undone.</p>
+        <button id="btn-clear" class="btn btn-danger">Clear Everything</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Statistics</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div id="stat-total-tasks" class="stat-value">0</div>
+          <div class="stat-label">Total Tasks</div>
+        </div>
+        <div class="stat-card">
+          <div id="stat-completed-tasks" class="stat-value">0</div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card">
+          <div id="stat-total-sessions" class="stat-value">0</div>
+          <div class="stat-label">Sessions</div>
+        </div>
+        <div class="stat-card">
+          <div id="stat-total-minutes" class="stat-value">0</div>
+          <div class="stat-label">Minutes</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      15-Minute Tracker v1.0.0
+    </footer>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

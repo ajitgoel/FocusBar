@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div id="app">
+    <div class="header">
+      <h1>15-Min Tracker</h1>
+      <div id="timer-display" class="timer">15:00</div>
+      <div id="timer-status" class="status">Ready</div>
+    </div>
+
+    <div class="controls">
+      <button id="btn-sleep" class="btn btn-secondary">Sleep</button>
+      <button id="btn-break" class="btn btn-break">Break (5m)</button>
+      <button id="btn-settings" class="btn btn-icon" title="Settings">⚙️</button>
+    </div>
+
+    <div id="checkin-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>What did you do?</h3>
+        <p class="timer-info">15-minute session complete</p>
+        <select id="task-select" class="select">
+          <option value="">-- Select a task --</option>
+        </select>
+        <input type="text" id="activity-input" class="input" placeholder="Describe what you did..." />
+        <div class="modal-actions">
+          <button id="btn-checkin-submit" class="btn btn-primary">Start Next Session</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="task-section">
+      <div class="section-header">
+        <h2>Tasks</h2>
+        <button id="btn-add-task" class="btn btn-small">+ Add</button>
+      </div>
+      <div id="add-task-form" class="hidden">
+        <input type="text" id="new-task-input" class="input" placeholder="New task name..." />
+        <button id="btn-save-task" class="btn btn-primary btn-small">Save</button>
+        <button id="btn-cancel-task" class="btn btn-secondary btn-small">Cancel</button>
+      </div>
+      <ul id="task-list" class="task-list"></ul>
+    </div>
+
+    <div id="selected-task-info" class="selected-task hidden">
+      <p>Working on: <strong id="current-task-name">None</strong></p>
+      <p>Sessions: <span id="current-task-sessions">0</span> (Total: <span id="current-task-minutes">0</span> min)</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
