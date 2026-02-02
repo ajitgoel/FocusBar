@@ -121,24 +121,7 @@
       }
     },
     "dmg": {
-      "title": "FocusBar",
-      "backgroundColor": "#f5f5f7",
-      "window": {
-        "width": 540,
-        "height": 380
-      },
-      "contents": [
-        {
-          "x": 130,
-          "y": 190
-        },
-        {
-          "x": 410,
-          "y": 190,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ]
+      "sign": false
     },
     "win": {
       "target": [
