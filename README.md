@@ -1,182 +1,314 @@
 # 15-Minute Productivity Tracker
 
-A desktop system tray / menu bar app that helps you track work in 15-minute increments with task management. Always visible in your system tray with a live countdown!
+A beautiful, native macOS menu bar app for tracking your work in 15-minute focused sessions. Lives in your menu bar with a live countdown timer.
 
-## Features
+## ✨ Features
 
-- **System Tray / Menu Bar App**: Lives in your system tray (Windows) or menu bar (Mac) - always visible!
-- **Live countdown on icon**: See remaining minutes directly in the tray icon
-- **Auto-start timer**: Timer begins automatically when you open the app
-- **15-minute work sessions**: Track your productivity in focused 15-minute blocks
-- **Check-in prompts**: After each session, log what you accomplished
-- **Task management**: Create tasks, track sessions per task, mark tasks complete
-- **5-minute breaks**: Take breaks between work sessions
-- **Sleep mode**: Pause the timer when you're not working (button or Ctrl/Cmd+Shift+S shortcut)
-- **Import/Export**: Backup and restore your tasks as JSON files
+- **🎯 Native macOS Menu Bar App** - Lives in your menu bar, always visible
+- **⏱️ Live Countdown** - Timer shows directly in the menu bar icon
+- **🚀 Auto-Start Timer** - Timer automatically starts when you open the app
+- **📁 File-Based Storage** - All data saved to a local JSON file (autosaved every change)
+- **📂 Task Groups** - Organize tasks into groups (Work, Personal, Custom)
+- **📝 Task Management** - Create tasks, track sessions, mark complete
+- **☕ Smart Breaks** - 5-minute break timer with one click
+- **⏯️ Sleep Mode** - Pause when not working (Cmd+Shift+S shortcut)
+- **💾 Import/Export** - Backup and restore your tasks as JSON files
+- **🎨 Beautiful UI** - Native macOS design with dark mode support
 
-## System Tray Icon Display
+## 📸 Screenshot
 
-The app icon in your system tray shows:
-- **Number** (e.g., "14", "9", "3") = Remaining minutes for work session
-- **Orange number** = Break time remaining
-- **"Zzz"** = Sleep mode (timer paused)
-- **"!"** = Check-in required (session complete)
+The app features a clean, native macOS interface:
+- Large, elegant timer display (72px SF Pro font)
+- Glass-morphism background with blur
+- Smooth animations and transitions
+- Dark mode automatic support
 
-## Installation
+## 🚀 Quick Start
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (version 18 or higher)
-- npm (comes with Node.js)
+- macOS 10.14 or later
+- Node.js 18+ (for building from source)
 
-### Install & Run
+### Option 1: Download Pre-built App (Recommended)
 
-1. **Navigate to the app folder:**
-   ```bash
-   cd 15-min-what-did-you-do-extension
-   ```
+1. Download the latest `.dmg` from [Releases](link-to-releases)
+2. Open the `.dmg` file
+3. Drag "15-Minute Tracker" to your Applications folder
+4. Launch from Applications or Spotlight
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+### Option 2: Build from Source
 
-3. **Start the app:**
-   ```bash
-   npm start
-   ```
-
-The app will appear in your system tray (Windows) or menu bar (Mac, near the clock).
-
-### Build Standalone App (Optional)
-
-To create a standalone executable:
-
-**For Mac:**
 ```bash
+# 1. Clone or navigate to the project folder
+cd 15-min-what-did-you-do-extension
+
+# 2. Install dependencies
+npm install
+
+# 3. Run in development mode
+npm run dev
+
+# 4. Or build the installable app
 npm run build-mac
 ```
 
-**For Windows:**
-```bash
-npm run build-win
+The built `.dmg` will be in the `dist/` folder.
+
+## 📁 Data Storage
+
+The app now uses **file-based storage** instead of a database:
+
+**Location:**
+```
+~/Library/Application Support/15min-tracker/tasks.json
 ```
 
-Built apps will be in the `dist/` folder.
+**Features:**
+- ✅ **Auto-saved** - Every change is immediately saved to the file
+- ✅ **Human-readable** - Plain JSON format you can edit if needed
+- ✅ **Portable** - Easy to backup, sync, or version control
+- ✅ **Import/Export** - Load different task files via Settings
 
-## How to Use
+**Data Structure:**
+```json
+{
+  "tasks": [
+    {
+      "id": "1234567890",
+      "name": "Review quarterly report",
+      "groupId": "group_work",
+      "sessions": 3,
+      "completed": false,
+      "logs": [...]
+    }
+  ],
+  "groups": [
+    { "id": "group_work", "name": "Work", "color": "#007aff" },
+    { "id": "group_personal", "name": "Personal", "color": "#ff9500" }
+  ],
+  "timerState": { ... }
+}
+```
 
-### Opening the App
-- **Click the tray icon** to open the main window
-- **Right-click the tray icon** for quick actions (Sleep, Break, Settings, Quit)
+## 🎮 How to Use
 
-### Workflow
-1. The timer auto-starts at 15:00 when you open the app
-2. Work on a task, then click a task in the list to select it
-3. When 15 minutes complete, a check-in window appears asking "What did you do?"
-4. Select the task you worked on and optionally describe what you did
-5. Click "Start Next Session" to immediately begin the next 15-minute block
-6. Use Sleep button or press `Ctrl/Cmd+Shift+S` to pause when not working
-7. Click Break button for a 5-minute break (orange icon shows break countdown)
+### Getting Started
+1. **Launch the app** - It appears in your menu bar near the clock
+2. **Timer auto-starts** - 15-minute countdown begins automatically
+3. **Click the menu bar icon** to open the main window
+4. **Add tasks** by clicking the + button
+5. **Organize with groups** - Assign tasks to Work, Personal, or custom groups
+6. **Select a task** to track time against it
+
+### Task Groups
+
+**Creating Groups:**
+- Click "+ Add Group" when adding a new task
+- Enter group name (e.g., "Client Work", "Study", "Shopping")
+- Tasks are automatically organized by group
+
+**Group Features:**
+- Groups are shown as collapsible sections
+- Click the arrow to expand/collapse
+- Groups show task count
+- Delete groups (× appears on hover)
+- Default groups: General, Work, Personal
+
+**Special Groups:**
+- **Ungrouped** - Tasks without a group
+- **Completed** - All completed tasks
+
+### During a Session
+- **Menu bar shows remaining minutes** (e.g., "15", "14", "3")
+- **Blue** = Working, **Orange** = On Break, **Zzz** = Paused
+- **Single-click** menu bar icon to show/hide window
+- **Right-click** for quick actions (Pause, Break, Settings, Quit)
+
+### When Session Completes
+- Notification appears
+- "Check-in" window opens automatically
+- Select the task you worked on
+- Optionally describe what you did
+- Click "Start Next Session" to continue
+
+### Keyboard Shortcuts
+- `Cmd + Shift + S` - Toggle sleep/pause (works globally!)
 
 ### Managing Tasks
 
 **Adding Tasks:**
-- Click "+ Add" button
+- Click "+ Add Task" button
 - Enter task name
-- Click "Save"
+- Select group (optional)
+- Click "Add Task" or press Enter
 
-**Selecting a Task:**
-- Click any task in the list to select it for the current session
-- Selected task is highlighted in blue
-- Task info shows at bottom: "Working on: [Task Name] - Sessions: X (Total: Y min)"
+**Creating New Groups:**
+- Click "New Group" button
+- Enter group name
+- Click "Create"
 
 **Completing Tasks:**
 - Click the checkbox next to a task to mark it complete
-- Completed tasks are crossed out but remain visible
+- Completed tasks move to the "Completed" section
 
-**Deleting Tasks:**
-- Click the "×" button next to a task
-- Confirm deletion
+**Deleting:**
+- **Tasks**: Hover and click × (appears on hover)
+- **Groups**: Hover over group header and click ×
 
-### Download / Upload Tasks (Data Backup)
+### Backup Your Data
 
-**Download (Export) your tasks:**
-1. Click the ⚙️ gear icon in the main window (or right-click tray icon → Settings)
-2. Go to "📥 Download / Export Tasks" section
-3. Click "💾 Download Tasks as JSON"
-4. Choose where to save the backup file (e.g., `15min-tracker-backup-2024-01-15.json`)
-5. Keep this file safe - it contains all your tasks, sessions, and history!
+**Export (Save to file):**
+1. Open Settings (⚙️ button or right-click menu)
+2. Go to "Export Tasks" section
+3. Click "Export to File"
+4. Choose location and save
 
-**Upload (Import) tasks:**
-1. Open Settings window
-2. Go to "📤 Upload / Import Tasks" section
-3. Click "Choose File" and select your backup JSON file
-4. Click "📤 Import Tasks from JSON"
-5. ⚠️ Warning: This will replace all your current tasks!
+**Import (Load from file):**
+1. Open Settings
+2. Go to "Import Tasks" section
+3. Click "Choose File"
+4. Select your backup JSON file
+5. Click "Import"
+6. ⚠️ Warning: This replaces all current data!
 
-### Keyboard Shortcut
-Press `Ctrl+Shift+S` (Windows/Linux) or `Cmd+Shift+S` (Mac) to toggle sleep mode from anywhere - even when the window is closed!
+**Manual Backup:**
+Simply copy the data file:
+```bash
+cp ~/Library/Application\ Support/15min-tracker/tasks.json ~/Desktop/backup.json
+```
 
-### Statistics
-Open Settings to see your productivity stats:
-- Total Tasks
-- Completed Tasks
-- Total Sessions
-- Minutes Tracked
+## 🏗️ Building the Installable App
 
-## File Structure
+To create a `.dmg` installer for distribution:
+
+```bash
+# Install dependencies
+npm install
+
+# Create icon files (optional - generates SVG templates)
+node create-icons.js
+
+# Build for Mac (Universal - works on Intel & Apple Silicon)
+npm run build-mac
+
+# Or build for specific architecture
+npm run build-mac-arm    # Apple Silicon only
+```
+
+The installer will be at:
+- `dist/15-Minute Tracker-1.0.0.dmg`
+
+### Creating Proper Icons (Optional)
+
+For a polished release, create proper `.icns` files:
+
+1. **Using Icon Set Creator** (Easiest):
+   - Download from Mac App Store
+   - Create 1024×1024 icon image
+   - Drag into Icon Set Creator
+   - Export as `.icns`
+   - Replace `icons/icon.icns`
+
+2. **Using Command Line**:
+   ```bash
+   # Create iconset folder
+   mkdir icons/icon.iconset
+   
+   # Add PNGs in various sizes (16x16, 32x32, 64x64, etc.)
+   # Then convert:
+   iconutil -c icns icons/icon.iconset
+   ```
+
+## 📁 File Structure
 
 ```
 15-min-what-did-you-do-extension/
-├── package.json          # Node.js dependencies
-├── main.js               # Electron main process (tray, window, timer)
-├── preload.js            # Secure IPC bridge
-├── index.html            # Main app window UI
-├── renderer.js           # Main window logic
-├── styles.css            # Main window styles
-├── settings.html         # Settings window UI
-├── settings.js           # Settings logic
-├── settings.css          # Settings styles
-├── icons/                # App icons
-└── README.md             # This file
+├── main.js              # Main Electron process (menu bar, timer, file storage)
+├── preload.js           # Secure IPC bridge
+├── renderer.js          # UI logic with groups
+├── index.html           # Main window (beautiful macOS UI with groups)
+├── settings.html        # Settings window
+├── settings.js          # Settings logic
+├── styles.css           # Main window styles
+├── package.json         # App config & build settings
+├── build/               # Build resources
+│   └── entitlements.mac.plist
+├── icons/               # App icons
+└── README.md           # This file
 ```
 
-## Data Storage
+## 🔧 Development
 
-All data is stored locally on your computer using Electron's secure storage:
-- **Windows**: `%APPDATA%/15min-productivity-tracker/`
-- **Mac**: `~/Library/Application Support/15min-productivity-tracker/`
+```bash
+# Run with hot reload (dev tools enabled)
+npm run dev
 
-Data includes:
-- Task names, completion status, session counts
-- Activity logs with timestamps
-- Timer state (running/sleeping/break)
+# The app will:
+# - Show in menu bar
+# - Auto-open dev tools
+# - Log to console
+```
 
-## Troubleshooting
+### Project Roadmap
+- [ ] Windows support (system tray)
+- [ ] Custom timer durations
+- [ ] Sound notifications
+- [ ] Daily/weekly stats
+- [ ] Cloud sync
 
-**App doesn't show in tray:**
-- On Mac, look in the menu bar near the clock
-- On Windows, check the system tray (may be hidden - click the ^ arrow)
+## 🐛 Troubleshooting
 
-**Timer not counting down:**
-- Check if Sleep mode is active (button will say "Wake Up")
-- Look at tray icon - "Zzz" means timer is paused
+**"App can't be opened" security warning:**
+- Right-click the app → Open
+- Or: System Preferences → Security & Privacy → Open Anyway
+
+**Menu bar icon not showing:**
+- Check System Preferences → Bartender (if using)
+- Look in the menu bar overflow (⋯)
+
+**Timer not auto-starting:**
+- First launch shows the window but doesn't auto-start
+- Subsequent launches auto-start the timer
+- Check if "hasLaunchedBefore" flag in storage
+
+**Data file not found:**
+- Check if the directory exists: `~/Library/Application Support/15min-tracker/`
+- The app creates it automatically on first run
+- Check app permissions in System Preferences
 
 **Import/Export issues:**
-- Make sure you're importing a valid JSON file exported from this app
-- The JSON file should have a `tasks` array
+- Ensure the JSON file has the correct structure (tasks, groups, timerState)
+- Check file permissions
+- Try exporting first to see the correct format
 
-## Uninstall
+**Build fails:**
+```bash
+# Clean and rebuild
+rm -rf node_modules dist
+npm install
+npm run build-mac
+```
 
-To remove the app:
-1. Quit the app (right-click tray icon → Quit)
-2. Delete the app folder
-3. Optional: Delete data folder (see Data Storage location above)
+## 📝 Data Migration
 
-## License
+**From Old Version (electron-store):**
+The app automatically migrates data from the old storage format on first launch.
 
-MIT
+**Manual Migration:**
+If you have old data in `~/Library/Application Support/15min-tracker/config.json`:
+1. Export it from the old app
+2. Import it in the new app via Settings
 
-## Support
+## 🙏 Credits
 
-For issues or questions, please check the README or create an issue on GitHub.
+Built with:
+- [Electron](https://electronjs.org/) - Cross-platform framework
+- SF Pro fonts - Apple's system font family
+
+## 📄 License
+
+MIT License - Feel free to use, modify, and distribute!
+
+---
+
+**Enjoy your focused work sessions!** 💪

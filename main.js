@@ -1,83 +1,100 @@
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, dialog } = require('electron');
 const path = require('path');
-const Store = require('electron-store');
-
-// Initialize storage
-const store = new Store();
+const fs = require('fs');
 
 // Global variables
 let tray = null;
 let window = null;
 let settingsWindow = null;
 let timerInterval = null;
-let timerState = {
-  running: false,
-  sleeping: false,
-  isBreak: false,
-  endTime: null,
-  remaining: 15 * 60,
-  selectedTaskId: null,
-  checkinPending: false,
-  lastSessionDate: null
+
+// Data storage
+let appData = {
+  tasks: [],
+  groups: [
+    { id: 'default', name: 'General', color: '#007aff' },
+    { id: 'work', name: 'Work', color: '#34c759' },
+    { id: 'personal', name: 'Personal', color: '#ff9500' }
+  ],
+  timerState: {
+    running: false,
+    sleeping: false,
+    isBreak: false,
+    endTime: null,
+    remaining: 15 * 60,
+    selectedTaskId: null,
+    checkinPending: false,
+    lastSessionDate: null
+  }
 };
 
-// Default timer duration
-const WORK_DURATION = 15 * 60; // 15 minutes in seconds
-const BREAK_DURATION = 5 * 60; // 5 minutes in seconds
-
-// Generate a high-quality tray icon with the timer text
-function generateTrayIcon(text, isBreak = false, isSleeping = false) {
-  const size = 44;
-  const canvas = document?.createElement('canvas');
-  
-  // Create SVG for the icon
-  const bgColor = isSleeping ? '#757575' : (isBreak ? '#FF9800' : '#2196F3');
-  const displayText = text || '15';
-  const fontSize = displayText.length > 2 ? '16' : '22';
-  
-  const svg = `
-    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:${bgColor};stop-opacity:1" />
-          <stop offset="100%" style="stop-color:${bgColor};stop-opacity:0.85" />
-        </linearGradient>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.3"/>
-        </filter>
-      </defs>
-      <rect x="2" y="2" width="${size-4}" height="${size-4}" rx="10" fill="url(#bg)" filter="url(#shadow)"/>
-      <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" 
-            fill="white" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif" 
-            font-size="${fontSize}" font-weight="600" letter-spacing="-0.5">${displayText}</text>
-    </svg>
-  `;
-  
-  return nativeImage.createFromBuffer(Buffer.from(svg));
+// Data file path
+function getDataPath() {
+  const userDataPath = app.getPath('userData');
+  return path.join(userDataPath, 'tasks.json');
 }
 
-// Update tray icon and title
+// Default timer duration
+const WORK_DURATION = 15 * 60;
+const BREAK_DURATION = 5 * 60;
+
+// Save data to file
+function saveDataToFile() {
+  const dataPath = getDataPath();
+  const dir = path.dirname(dataPath);
+  
+  // Ensure directory exists
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  
+  // Write data
+  try {
+    fs.writeFileSync(dataPath, JSON.stringify(appData, null, 2), 'utf8');
+    console.log('Data saved to:', dataPath);
+    return true;
+  } catch (error) {
+    console.error('Error saving data:', error);
+    return false;
+  }
+}
+
+// Load data from file
+function loadDataFromFile() {
+  const dataPath = getDataPath();
+  
+  if (fs.existsSync(dataPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+      appData = { ...appData, ...data };
+      console.log('Data loaded from:', dataPath);
+      return true;
+    } catch (error) {
+      console.error('Error loading data:', error);
+      return false;
+    }
+  }
+  return false;
+}
+
+// Update tray icon
 function updateTrayIcon() {
   if (!tray) return;
   
+  const state = appData.timerState;
   let displayText = '';
-  let isBreak = false;
-  let isSleeping = false;
   let tooltip = '15-Minute Tracker';
   
-  if (timerState.sleeping) {
+  if (state.sleeping) {
     displayText = 'Zzz';
-    isSleeping = true;
     tooltip = '15-Minute Tracker - Paused';
-  } else if (timerState.running) {
-    const remaining = Math.max(0, Math.ceil((timerState.endTime - Date.now()) / 1000));
+  } else if (state.running) {
+    const remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
     const minutes = Math.floor(remaining / 60);
     displayText = minutes > 99 ? '99+' : minutes.toString();
-    isBreak = timerState.isBreak;
-    
-    const status = isBreak ? 'Break' : 'Focus';
-    tooltip = `${status} - ${minutes} min remaining`;
-  } else if (timerState.checkinPending) {
+    const statusText = state.isBreak ? 'Break' : 'Focus';
+    tooltip = `${statusText} - ${minutes} min remaining`;
+  } else if (state.checkinPending) {
     displayText = '!';
     tooltip = 'Session complete - Log your work';
   } else {
@@ -85,35 +102,29 @@ function updateTrayIcon() {
     tooltip = 'Ready to focus';
   }
   
-  // Update macOS menu bar title
   if (process.platform === 'darwin') {
-    tray.setTitle(` ${displayText}`, { fontFamily: 'SF Pro Text', fontSize: 14 });
+    tray.setTitle(` ${displayText}`);
   }
-  
-  // Update tooltip
   tray.setToolTip(tooltip);
-  
-  // Update context menu
   updateContextMenu();
 }
 
-// Create elegant context menu
+// Context menu
 function updateContextMenu() {
   const template = [
     {
       label: '15-Minute Tracker',
-      enabled: false,
-      icon: nativeImage.createFromBuffer(Buffer.from(`<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="7" fill="#2196F3"/></svg>`))
+      enabled: false
     },
     { type: 'separator' },
     {
-      label: timerState.sleeping ? '▶ Resume' : '⏸ Pause',
+      label: appData.timerState.sleeping ? '▶ Resume' : '⏸ Pause',
       accelerator: 'CmdOrCtrl+Shift+S',
       click: toggleSleep
     },
     {
-      label: timerState.isBreak ? '💼 Back to Work' : '☕ Take Break',
-      click: timerState.isBreak ? () => startTimer(false) : startBreak
+      label: appData.timerState.isBreak ? '💼 Back to Work' : '☕ Take Break',
+      click: appData.timerState.isBreak ? () => startTimer(false) : startBreak
     },
     { type: 'separator' },
     {
@@ -128,66 +139,57 @@ function updateContextMenu() {
     {
       label: '❌ Quit',
       accelerator: 'Cmd+Q',
-      click: () => {
-        app.quit();
-      }
+      click: () => app.quit()
     }
   ];
   
-  const contextMenu = Menu.buildFromTemplate(template);
-  tray.setContextMenu(contextMenu);
+  tray.setContextMenu(Menu.buildFromTemplate(template));
 }
 
 // Timer functions
-function startTimer(isBreak = false, autoStart = true) {
+function startTimer(isBreak = false) {
   const duration = isBreak ? BREAK_DURATION : WORK_DURATION;
-  timerState.running = true;
-  timerState.sleeping = false;
-  timerState.isBreak = isBreak;
-  timerState.remaining = duration;
-  timerState.endTime = Date.now() + duration * 1000;
-  timerState.checkinPending = false;
-  timerState.lastSessionDate = new Date().toDateString();
+  appData.timerState = {
+    ...appData.timerState,
+    running: true,
+    sleeping: false,
+    isBreak: isBreak,
+    remaining: duration,
+    endTime: Date.now() + duration * 1000,
+    checkinPending: false,
+    lastSessionDate: new Date().toDateString()
+  };
   
-  saveTimerState();
+  saveDataToFile();
   startTimerInterval();
   updateTrayIcon();
   
-  // Notify renderer if window is open
   if (window && !window.isDestroyed()) {
-    window.webContents.send('timer-updated', timerState);
-  }
-  
-  // Show notification when starting
-  if (autoStart && !isBreak) {
-    showNotification('Focus Session Started', '15 minutes of focused work. You\'ve got this! 💪');
-  } else if (isBreak) {
-    showNotification('Break Time!', 'Take 5 minutes to recharge. ☕');
+    window.webContents.send('timer-updated', appData.timerState);
   }
 }
 
 function toggleSleep() {
-  timerState.sleeping = !timerState.sleeping;
+  const state = appData.timerState;
+  state.sleeping = !state.sleeping;
   
-  if (timerState.sleeping) {
-    if (timerState.endTime) {
-      timerState.remaining = Math.max(0, Math.ceil((timerState.endTime - Date.now()) / 1000));
+  if (state.sleeping) {
+    if (state.endTime) {
+      state.remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
     }
     stopTimerInterval();
-    showNotification('Timer Paused', 'Your session is paused. Click Resume when ready.');
   } else {
-    if (timerState.running && timerState.remaining > 0) {
-      timerState.endTime = Date.now() + timerState.remaining * 1000;
+    if (state.running && state.remaining > 0) {
+      state.endTime = Date.now() + state.remaining * 1000;
       startTimerInterval();
-      showNotification('Timer Resumed', 'Back to it! 💪');
     }
   }
   
-  saveTimerState();
+  saveDataToFile();
   updateTrayIcon();
   
   if (window && !window.isDestroyed()) {
-    window.webContents.send('timer-updated', timerState);
+    window.webContents.send('timer-updated', state);
   }
 }
 
@@ -198,16 +200,13 @@ function startBreak() {
 function startTimerInterval() {
   stopTimerInterval();
   timerInterval = setInterval(() => {
-    if (timerState.running && !timerState.sleeping) {
-      const remaining = Math.max(0, Math.ceil((timerState.endTime - Date.now()) / 1000));
-      
+    const state = appData.timerState;
+    if (state.running && !state.sleeping) {
+      const remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
       if (remaining <= 0) {
         timerComplete();
-      } else {
-        // Update tray every 5 seconds to keep it fresh
-        if (remaining % 5 === 0) {
-          updateTrayIcon();
-        }
+      } else if (remaining % 5 === 0) {
+        updateTrayIcon();
       }
     }
   }, 1000);
@@ -221,133 +220,145 @@ function stopTimerInterval() {
 }
 
 function timerComplete() {
-  timerState.running = false;
-  timerState.checkinPending = true;
-  timerState.remaining = 0;
+  const state = appData.timerState;
+  state.running = false;
+  state.checkinPending = true;
+  state.remaining = 0;
   stopTimerInterval();
-  saveTimerState();
+  saveDataToFile();
   updateTrayIcon();
   
-  // Show notification
-  const title = timerState.isBreak ? 'Break Complete!' : 'Session Complete! 🎉';
-  const message = timerState.isBreak 
-    ? 'Break\'s over! Ready to get back to work?' 
-    : 'Great work! What did you accomplish?';
-  
-  showNotification(title, message);
-  
-  // Open window for check-in
   showWindow();
   
   if (window && !window.isDestroyed()) {
-    window.webContents.send('timer-complete', timerState);
+    window.webContents.send('timer-complete', state);
   }
 }
 
-function showNotification(title, body) {
-  // Use tray balloon on Windows, Notification on Mac
-  if (process.platform === 'darwin') {
-    const notification = new (require('electron').Notification)({
-      title: title,
-      body: body,
-      silent: false
-    });
-    notification.show();
-  } else {
-    tray.displayBalloon({
-      iconType: 'info',
-      title: title,
-      content: body
-    });
-  }
-}
+// IPC Handlers
+ipcMain.handle('get-data', () => appData);
 
-// Data persistence
-function saveTimerState() {
-  store.set('timerState', timerState);
-}
+ipcMain.handle('get-tasks', () => appData.tasks);
 
-function loadTimerState() {
-  const saved = store.get('timerState');
-  if (saved) {
-    timerState = saved;
-    // Check if it's a new day
-    const today = new Date().toDateString();
-    if (timerState.lastSessionDate !== today) {
-      // Reset for new day
-      timerState.running = false;
-      timerState.sleeping = false;
-      timerState.checkinPending = false;
-      timerState.remaining = WORK_DURATION;
-    } else if (timerState.running && timerState.endTime) {
-      // Resume from saved state
-      const remaining = Math.ceil((timerState.endTime - Date.now()) / 1000);
-      if (remaining <= 0) {
-        timerState.running = false;
-        timerState.checkinPending = true;
-        timerState.remaining = 0;
-      } else {
-        timerState.remaining = remaining;
-      }
-    }
-  }
-}
+ipcMain.handle('save-tasks', (event, tasks) => {
+  appData.tasks = tasks;
+  saveDataToFile();
+});
 
-// IPC handlers
-ipcMain.handle('get-tasks', () => store.get('tasks', []));
-ipcMain.handle('save-tasks', (event, tasks) => store.set('tasks', tasks));
-ipcMain.handle('get-timer-state', () => timerState);
+ipcMain.handle('get-groups', () => appData.groups);
+
+ipcMain.handle('save-groups', (event, groups) => {
+  appData.groups = groups;
+  saveDataToFile();
+});
+
+ipcMain.handle('get-timer-state', () => appData.timerState);
+
+ipcMain.handle('save-groups', (event, groups) => {
+  appData.groups = groups;
+  saveDataToFile();
+});
+
 ipcMain.handle('save-timer-state', (event, state) => {
-  timerState = state;
-  saveTimerState();
+  appData.timerState = state;
+  saveDataToFile();
   updateTrayIcon();
 });
+
 ipcMain.handle('start-timer', () => startTimer(false));
 ipcMain.handle('start-break', () => startBreak());
 ipcMain.handle('toggle-sleep', () => toggleSleep());
+
 ipcMain.handle('submit-checkin', (event, data) => {
-  const tasks = store.get('tasks', []);
-  const task = tasks.find(t => t.id === data.taskId);
+  const task = appData.tasks.find(t => t.id === data.taskId);
   if (task) {
     task.sessions = (task.sessions || 0) + 1;
     task.logs = task.logs || [];
     task.logs.push({
       timestamp: Date.now(),
       activity: data.activity,
-      duration: timerState.isBreak ? 5 : 15
+      duration: appData.timerState.isBreak ? 5 : 15
     });
-    store.set('tasks', tasks);
-    timerState.selectedTaskId = data.taskId;
+    appData.timerState.selectedTaskId = data.taskId;
   }
   
-  timerState.isBreak = false;
-  timerState.checkinPending = false;
-  startTimer(false, true);
+  appData.timerState.isBreak = false;
+  appData.timerState.checkinPending = false;
+  saveDataToFile();
+  startTimer(false);
 });
+
 ipcMain.handle('export-data', async () => {
   return JSON.stringify({
     exportDate: new Date().toISOString(),
     version: '1.0.0',
-    tasks: store.get('tasks', []),
-    timerState
+    tasks: appData.tasks,
+    groups: appData.groups,
+    timerState: appData.timerState
   }, null, 2);
 });
+
 ipcMain.handle('import-data', async (event, jsonData) => {
   try {
     const data = JSON.parse(jsonData);
-    if (data.tasks) store.set('tasks', data.tasks);
-    if (data.timerState) {
-      timerState = data.timerState;
-      saveTimerState();
-    }
+    if (data.tasks) appData.tasks = data.tasks;
+    if (data.groups) appData.groups = data.groups;
+    if (data.timerState) appData.timerState = data.timerState;
+    saveDataToFile();
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
 });
+
+ipcMain.handle('import-data-from-file', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'JSON Files', extensions: ['json'] }]
+  });
+  
+  if (!result.canceled && result.filePaths.length > 0) {
+    try {
+      const data = JSON.parse(fs.readFileSync(result.filePaths[0], 'utf8'));
+      if (data.tasks) appData.tasks = data.tasks;
+      if (data.groups) appData.groups = data.groups;
+      if (data.timerState) appData.timerState = data.timerState;
+      saveDataToFile();
+      return { success: true, filePath: result.filePaths[0] };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  return { success: false, error: 'No file selected' };
+});
+
+ipcMain.handle('export-data-to-file', async () => {
+  const result = await dialog.showSaveDialog({
+    defaultPath: `15min-tracker-backup-${new Date().toISOString().split('T')[0]}.json`,
+    filters: [{ name: 'JSON Files', extensions: ['json'] }]
+  });
+  
+  if (!result.canceled) {
+    try {
+      const data = {
+        exportDate: new Date().toISOString(),
+        version: '1.0.0',
+        tasks: appData.tasks,
+        groups: appData.groups,
+        timerState: appData.timerState
+      };
+      fs.writeFileSync(result.filePath, JSON.stringify(data, null, 2), 'utf8');
+      return { success: true, filePath: result.filePath };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+  return { success: false, error: 'No file selected' };
+});
+
 ipcMain.handle('clear-data', () => {
-  store.clear();
-  timerState = {
+  appData.tasks = [];
+  appData.timerState = {
     running: false,
     sleeping: false,
     isBreak: false,
@@ -356,28 +367,27 @@ ipcMain.handle('clear-data', () => {
     selectedTaskId: null,
     checkinPending: false
   };
-  saveTimerState();
+  saveDataToFile();
   updateTrayIcon();
 });
 
-// Create main window - Beautiful macOS style
+ipcMain.handle('open-settings', () => openSettings());
+
+// Window management
 function createWindow() {
   if (window && !window.isDestroyed()) {
     window.focus();
     return;
   }
   
-  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  
   window = new BrowserWindow({
-    width: 380,
-    height: 620,
+    width: 420,
+    height: 750,
     show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
-      scrollBounce: true
+      preload: path.join(__dirname, 'preload.js')
     },
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 15, y: 15 },
@@ -385,27 +395,23 @@ function createWindow() {
     transparent: true,
     backgroundColor: '#00000000',
     roundedCorners: true,
-    hasShadow: true,
-    shadow: true,
     minimizable: false,
     maximizable: false,
-    fullscreenable: false,
-    alwaysOnTop: false
+    fullscreenable: false
   });
   
   window.loadFile('index.html');
-  
-  // Position window near cursor or tray
   positionWindow();
   
-  // Show window with animation
   window.once('ready-to-show', () => {
     window.show();
     window.focus();
+    // Send current timer state to renderer
+    window.webContents.send('timer-updated', appData.timerState);
   });
   
   window.on('blur', () => {
-    if (!checkinModalOpen()) {
+    if (!appData.timerState.checkinPending) {
       window.hide();
     }
   });
@@ -415,29 +421,21 @@ function createWindow() {
   });
 }
 
-function checkinModalOpen() {
-  // Check if check-in modal is open - don't hide in that case
-  return timerState.checkinPending;
-}
-
 function positionWindow() {
-  if (!window) return;
+  if (!window || !tray) return;
   
   const trayBounds = tray.getBounds();
   const windowBounds = window.getBounds();
-  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize;
   
-  // Default position: center the window horizontally above the tray
   let x = Math.round(trayBounds.x + (trayBounds.width / 2) - (windowBounds.width / 2));
   let y = Math.round(trayBounds.y - windowBounds.height - 10);
   
-  // Ensure window stays on screen
   if (x < 10) x = 10;
   if (x + windowBounds.width > screenWidth - 10) {
     x = screenWidth - windowBounds.width - 10;
   }
   if (y < 10) {
-    // If too close to top, show below tray
     y = Math.round(trayBounds.y + trayBounds.height + 10);
   }
   
@@ -454,7 +452,6 @@ function showWindow() {
   }
 }
 
-// Create settings window
 function openSettings() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.focus();
@@ -471,12 +468,10 @@ function openSettings() {
     },
     title: '15-Minute Tracker Settings',
     titleBarStyle: 'hiddenInset',
-    vibrancy: 'under-window',
-    backgroundColor: '#f5f5f5'
+    vibrancy: 'under-window'
   });
   
   settingsWindow.loadFile('settings.html');
-  
   settingsWindow.on('closed', () => {
     settingsWindow = null;
   });
@@ -484,29 +479,18 @@ function openSettings() {
 
 // Create tray
 function createTray() {
-  // Use a template image for macOS (follows dark/light mode)
-  const iconPath = path.join(__dirname, 'icons', 'iconTemplate.png');
-  let icon;
+  const svgBuffer = Buffer.from(`
+    <svg width="22" height="22" viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="11" cy="11" r="10" fill="#007aff"/>
+      <text x="11" y="15" text-anchor="middle" fill="white" font-family="-apple-system" font-size="10" font-weight="600">15</text>
+    </svg>
+  `);
   
-  try {
-    icon = nativeImage.createFromPath(iconPath);
-    icon.setTemplateImage(true);
-  } catch {
-    // Fallback: create colored circle icon
-    const svgBuffer = Buffer.from(`
-      <svg width="22" height="22" viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="11" cy="11" r="10" fill="#2196F3"/>
-        <text x="11" y="15" text-anchor="middle" fill="white" font-family="system-ui" font-size="12" font-weight="600">15</text>
-      </svg>
-    `);
-    icon = nativeImage.createFromBuffer(svgBuffer);
-  }
-  
+  const icon = nativeImage.createFromBuffer(svgBuffer);
   tray = new Tray(icon);
   tray.setToolTip('15-Minute Tracker');
   
-  // Single click to show/hide
-  tray.on('click', (event, bounds) => {
+  tray.on('click', () => {
     if (window && window.isVisible()) {
       window.hide();
     } else {
@@ -514,8 +498,7 @@ function createTray() {
     }
   });
   
-  // Right click for menu
-  tray.on('right-click', (event, bounds) => {
+  tray.on('right-click', () => {
     tray.popUpContextMenu();
   });
   
@@ -523,26 +506,29 @@ function createTray() {
   updateTrayIcon();
 }
 
-// App event handlers
+// App lifecycle
 app.whenReady().then(() => {
-  loadTimerState();
+  console.log('App ready - initializing...');
+  
+  // Load data from file
+  const loaded = loadDataFromFile();
+  console.log('Data loaded:', loaded);
+  console.log('Data path:', getDataPath());
+  
   createTray();
   
-  // AUTO-START TIMER if not running and not on first launch
-  const hasLaunchedBefore = store.get('hasLaunchedBefore', false);
-  if (!hasLaunchedBefore) {
-    // First launch - show window but don't auto-start
-    store.set('hasLaunchedBefore', true);
-    setTimeout(() => showWindow(), 500);
-  } else if (!timerState.running && !timerState.checkinPending && !timerState.sleeping) {
-    // Auto-start the timer on subsequent launches
-    startTimer(false, true);
-  } else if (timerState.running && !timerState.sleeping) {
-    // Resume timer if it was running
+  const state = appData.timerState;
+  if (state.checkinPending) {
+    setTimeout(() => showWindow(), 300);
+  } else if (state.sleeping) {
+    updateTrayIcon();
+  } else if (state.running && state.remaining > 0) {
     startTimerInterval();
+    updateTrayIcon();
+  } else {
+    console.log('Starting fresh timer...');
+    setTimeout(() => startTimer(false), 500);
   }
-  
-  updateTrayIcon();
   
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -552,15 +538,15 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', (e) => {
-  // Prevent default - we want to keep running in tray
   e.preventDefault();
 });
 
 app.on('before-quit', () => {
   stopTimerInterval();
+  saveDataToFile();
 });
 
-// Single instance lock
+// Single instance
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {

@@ -1,14 +1,14 @@
 // settings.js - Settings page functionality for desktop app
 
-let tasks = [];
+let appData = { tasks: [], groups: [] };
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Load and display statistics
   await loadStats();
   
   // Setup event listeners
-  document.getElementById('btn-export').addEventListener('click', exportData);
-  document.getElementById('btn-import').addEventListener('click', importData);
+  document.getElementById('btn-export').addEventListener('click', exportDataToFile);
+  document.getElementById('btn-import').addEventListener('click', importDataFromFile);
   document.getElementById('btn-clear').addEventListener('click', clearAllData);
   document.getElementById('back-link').addEventListener('click', (e) => {
     e.preventDefault();
@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Load and display statistics
 async function loadStats() {
   try {
-    tasks = await window.electronAPI.getTasks();
+    appData = await window.electronAPI.getData();
+    const tasks = appData.tasks || [];
+    const groups = appData.groups || [];
     
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(t => t.completed).length;
@@ -37,71 +39,34 @@ async function loadStats() {
   }
 }
 
-// Export data to JSON file
-async function exportData() {
+// Export data using file dialog
+async function exportDataToFile() {
   try {
-    const jsonData = await window.electronAPI.exportData();
+    const result = await window.electronAPI.exportDataToFile();
     
-    // Create a blob and download
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const date = new Date().toISOString().split('T')[0];
-    const filename = `15min-tracker-backup-${date}.json`;
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    showStatus('Data exported successfully!', 'success');
+    if (result.success) {
+      showStatus(`Data exported to: ${result.filePath}`, 'success');
+    } else {
+      showStatus(`Export failed: ${result.error}`, 'error');
+    }
   } catch (error) {
     showStatus(`Export failed: ${error.message}`, 'error');
   }
 }
 
-// Import data from JSON file
-async function importData() {
-  const fileInput = document.getElementById('import-file');
-  
-  if (!fileInput.files || fileInput.files.length === 0) {
-    showStatus('Please select a file to import', 'error');
+// Import data using file dialog
+async function importDataFromFile() {
+  if (!confirm('This will replace all your current tasks and groups. Continue?')) {
     return;
   }
   
-  const file = fileInput.files[0];
-  
   try {
-    const text = await file.text();
-    
-    // Validate it's proper JSON
-    const data = JSON.parse(text);
-    
-    if (!data.tasks || !Array.isArray(data.tasks)) {
-      throw new Error('Invalid file format: tasks array not found');
-    }
-    
-    // Confirm import
-    const taskCount = data.tasks.length;
-    const sessionCount = data.tasks.reduce((sum, t) => sum + (t.sessions || 0), 0);
-    
-    if (!confirm(`Import ${taskCount} tasks with ${sessionCount} sessions? This will replace your current data.`)) {
-      return;
-    }
-    
-    // Send to main process
-    const result = await window.electronAPI.importData(text);
+    const result = await window.electronAPI.importDataFromFile();
     
     if (result.success) {
-      showStatus(`Successfully imported ${taskCount} tasks!`, 'success');
-      fileInput.value = '';
-      
-      // Refresh stats
+      showStatus(`Data imported from: ${result.filePath}`, 'success');
       await loadStats();
-    } else {
+    } else if (result.error !== 'No file selected') {
       showStatus(`Import failed: ${result.error}`, 'error');
     }
   } catch (error) {
