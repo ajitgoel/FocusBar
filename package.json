@@ -67,6 +67,7 @@
     "appId": "com.focusbar.app",
     "productName": "FocusBar",
     "copyright": "Copyright © 2024",
+    "publish": null,
     "directories": {
       "output": "dist",
       "buildResources": "build"
