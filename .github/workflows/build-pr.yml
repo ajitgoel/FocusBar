@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [ main, master ]
 
+permissions:
+  pull-requests: write
+
 jobs:
   build-macos:
     runs-on: macos-latest
