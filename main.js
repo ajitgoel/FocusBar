@@ -254,11 +254,6 @@ ipcMain.handle('save-groups', (event, groups) => {
 
 ipcMain.handle('get-timer-state', () => appData.timerState);
 
-ipcMain.handle('save-groups', (event, groups) => {
-  appData.groups = groups;
-  saveDataToFile();
-});
-
 ipcMain.handle('save-timer-state', (event, state) => {
   appData.timerState = state;
   saveDataToFile();
