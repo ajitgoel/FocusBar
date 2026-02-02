@@ -94,7 +94,13 @@ function setupEventListeners() {
   });
 
   btnBreak.addEventListener('click', async () => {
-    await window.electronAPI.startBreak();
+    if (timerState.isBreak) {
+      // End break and go back to work
+      await window.electronAPI.startTimer();
+    } else {
+      // Start a break
+      await window.electronAPI.startBreak();
+    }
   });
 
   btnSettings.addEventListener('click', () => {
@@ -194,6 +200,21 @@ function updateStatusBadge() {
   
   statusBadge.textContent = status;
   statusBadge.className = 'status-badge ' + className;
+  
+  // Update break button text based on state
+  updateBreakButton();
+}
+
+function updateBreakButton() {
+  if (timerState.isBreak) {
+    btnBreak.textContent = 'Back to Work';
+    btnBreak.classList.remove('btn-break');
+    btnBreak.classList.add('btn-primary');
+  } else {
+    btnBreak.textContent = 'Break';
+    btnBreak.classList.remove('btn-primary');
+    btnBreak.classList.add('btn-break');
+  }
 }
 
 // Sleep button update
