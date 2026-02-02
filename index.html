@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
   <title>FocusBar</title>
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <div class="app-container">
     <!-- Header with Timer -->
@@ -27,14 +30,14 @@
       <div class="modal">
         <h3>What did you accomplish?</h3>
         <div class="modal-subtitle">Great work! Log your progress below</div>
-        
+
         <div class="input-group">
           <label class="input-label">Task</label>
           <select id="task-select" class="select">
             <option value="">Select a task (optional)</option>
           </select>
         </div>
-        
+
         <div class="input-group">
           <label class="input-label">Or create new</label>
           <input type="text" id="new-task-name-input" class="input" placeholder="New task name...">
@@ -42,12 +45,12 @@
             <option value="">No group</option>
           </select>
         </div>
-        
+
         <div class="input-group">
           <label class="input-label">What did you do?</label>
           <input type="text" id="activity-input" class="input" placeholder="Brief description...">
         </div>
-        
+
         <div class="modal-actions">
           <button id="btn-checkin-submit" class="btn btn-primary">Start Next Session</button>
         </div>
@@ -83,17 +86,46 @@
       </ul>
     </div>
 
+    <!-- Edit Task Modal -->
+    <div id="edit-task-overlay" class="modal-overlay">
+      <div class="modal">
+        <h3>Edit Task</h3>
+        <div class="modal-subtitle">Update task name and details</div>
+
+        <div class="input-group">
+          <label class="input-label">Task Name</label>
+          <input type="text" id="edit-task-name" class="input" placeholder="Task name...">
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Details</label>
+          <textarea id="edit-task-details" class="input textarea"
+            placeholder="Add more details about this task..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button id="btn-edit-save" class="btn btn-primary">Save Changes</button>
+          <button id="btn-edit-cancel" class="btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Selected Task Info -->
     <div id="selected-task-info" class="selected-task-info hidden">
-      <div class="current-task-label">Currently Working On</div>
+      <div class="selected-task-header">
+        <div class="current-task-label">Currently Working On</div>
+        <button id="btn-edit-current-task" class="btn-icon-tiny" title="Edit task details">✎</button>
+      </div>
       <div id="current-task-name" class="current-task-name">None selected</div>
       <div class="current-task-stats">
-        <span id="current-task-sessions">0</span> sessions completed • 
+        <span id="current-task-sessions">0</span> sessions completed •
         <span id="current-task-minutes">0</span> minutes total
       </div>
+      <div id="current-task-details" class="current-task-details hidden"></div>
     </div>
   </div>
 
   <script src="renderer.js"></script>
 </body>
+
 </html>
