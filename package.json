@@ -92,6 +92,7 @@
       "node_modules/electron-store/**/*"
     ],
     "mac": {
+      "icon": "icons/icon_512x512.png",
       "target": [
         {
           "target": "dmg",
