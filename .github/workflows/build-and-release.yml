@@ -1,0 +1,149 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Get full history for changelog
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Get version and changelog
+      id: version
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Current version: $VERSION"
+        
+        # Get the last commit message for the changelog
+        LAST_COMMIT=$(git log -1 --pretty=%B)
+        echo "last_commit<<EOF" >> $GITHUB_OUTPUT
+        echo "$LAST_COMMIT" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+    - name: Build macOS app
+      run: npm run build-mac
+      env:
+        # Disable code signing for now
+        # To enable, add Apple Developer credentials as GitHub secrets
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+        
+    - name: Verify build
+      run: |
+        ls -la dist/
+        if [ ! -f "dist/FocusBar-${{ steps.version.outputs.version }}.dmg" ]; then
+          echo "❌ DMG file not found!"
+          exit 1
+        fi
+        echo "✅ Build verified"
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-build-${{ steps.version.outputs.version }}
+        path: |
+          dist/*.dmg
+          dist/*.zip
+        retention-days: 30
+        
+    - name: Create or Update Release
+      uses: softprops/action-gh-release@v1
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      with:
+        name: "v${{ steps.version.outputs.version }} - Latest"
+        tag_name: "latest"
+        files: |
+          dist/*.dmg
+          dist/*.zip
+        body: |
+          ## 🚀 Latest Release v${{ steps.version.outputs.version }}
+          
+          **Built automatically from main branch**
+          
+          ### Last Update
+          ${{ steps.version.outputs.last_commit }}
+          
+          ### Installation
+          
+          #### macOS
+          1. Download the `.dmg` file below
+          2. Open the DMG
+          3. Drag "FocusBar" to your Applications folder
+          4. Launch from Applications or Spotlight
+          
+          **⚠️ Security Warning:** If macOS says the app can't be opened:
+          - Right-click the app → "Open"
+          - Or go to System Preferences → Security & Privacy → "Open Anyway"
+          
+          ### System Requirements
+          - macOS 10.14 or later
+          - Intel or Apple Silicon (Universal binary)
+          
+          ### What's New
+          See [commit history](https://github.com/${{ github.repository }}/commits/main) for all changes.
+          
+          ### Verification
+          - **Commit:** ${{ github.sha }}
+          - **Build Date:** ${{ github.event.head_commit.timestamp }}
+          - **Workflow Run:** [#${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        draft: false
+        prerelease: false
+        fail_on_unmatched_files: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Create Versioned Release (for tags)
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/v')
+      with:
+        files: |
+          dist/*.dmg
+          dist/*.zip
+        generate_release_notes: true
+        fail_on_unmatched_files: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Update README with download link
+      uses: actions/github-script@v7
+      if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+      with:
+        script: |
+          const fs = require('fs');
+          const readme = fs.readFileSync('README.md', 'utf8');
+          
+          // Update the download link in README
+          const updatedReadme = readme.replace(
+            /\[Download Latest Release\]\(.*?\)/,
+            `[Download Latest Release](https://github.com/${{ github.repository }}/releases/tag/latest)`
+          );
+          
+          if (readme !== updatedReadme) {
+            fs.writeFileSync('README.md', updatedReadme);
+            
+            // Commit the change
+            const { execSync } = require('child_process');
+            execSync('git config user.name "GitHub Actions"');
+            execSync('git config user.email "actions@github.com"');
+            execSync('git add README.md');
+            execSync('git commit -m "📦 Update download link to latest release [skip ci]" || true');
+            execSync('git push || true');
+          }

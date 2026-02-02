@@ -1,6 +1,15 @@
-# 15-Minute Productivity Tracker
+# FocusBar Productivity Tracker
+
+![Build Status](https://github.com/YOUR_USERNAME/FocusBar/workflows/Build%20and%20Release/badge.svg)
+[![Download Latest](https://img.shields.io/badge/Download-Latest%20Release-blue)](https://github.com/YOUR_USERNAME/FocusBar/releases/tag/latest)
 
 A beautiful, native macOS menu bar app for tracking your work in 15-minute focused sessions. Lives in your menu bar with a live countdown timer.
+
+## 📥 Download
+
+**[⬇️ Download Latest Release for macOS](https://github.com/YOUR_USERNAME/FocusBar/releases/tag/latest)**
+
+*Latest build automatically created on every code change*
 
 ## ✨ Features
 
@@ -33,7 +42,7 @@ The app features a clean, native macOS interface:
 
 1. Download the latest `.dmg` from [Releases](link-to-releases)
 2. Open the `.dmg` file
-3. Drag "15-Minute Tracker" to your Applications folder
+3. Drag "FocusBar" to your Applications folder
 4. Launch from Applications or Spotlight
 
 ### Option 2: Build from Source
@@ -60,7 +69,7 @@ The app now uses **file-based storage** instead of a database:
 
 **Location:**
 ```
-~/Library/Application Support/15min-tracker/tasks.json
+~/Library/Application Support/focusbar/tasks.json
 ```
 
 **Features:**
@@ -174,7 +183,7 @@ The app now uses **file-based storage** instead of a database:
 **Manual Backup:**
 Simply copy the data file:
 ```bash
-cp ~/Library/Application\ Support/15min-tracker/tasks.json ~/Desktop/backup.json
+cp ~/Library/Application\ Support/focusbar/tasks.json ~/Desktop/backup.json
 ```
 
 ## 🏗️ Building the Installable App
@@ -196,7 +205,7 @@ npm run build-mac-arm    # Apple Silicon only
 ```
 
 The installer will be at:
-- `dist/15-Minute Tracker-1.0.0.dmg`
+- `dist/FocusBar-1.0.0.dmg`
 
 ### Creating Proper Icons (Optional)
 
@@ -272,7 +281,7 @@ npm run dev
 - Check if "hasLaunchedBefore" flag in storage
 
 **Data file not found:**
-- Check if the directory exists: `~/Library/Application Support/15min-tracker/`
+- Check if the directory exists: `~/Library/Application Support/focusbar/`
 - The app creates it automatically on first run
 - Check app permissions in System Preferences
 
@@ -295,7 +304,7 @@ npm run build-mac
 The app automatically migrates data from the old storage format on first launch.
 
 **Manual Migration:**
-If you have old data in `~/Library/Application Support/15min-tracker/config.json`:
+If you have old data in `~/Library/Application Support/focusbar/config.json`:
 1. Export it from the old app
 2. Import it in the new app via Settings
 

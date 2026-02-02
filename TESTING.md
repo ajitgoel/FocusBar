@@ -125,7 +125,7 @@ npm start
 # Quit the app (Cmd+Q or right-click menu bar icon)
 
 # Check the data file was saved:
-cat ~/Library/Application\ Support/15min-tracker/tasks.json
+cat ~/Library/Application\ Support/focusbar/tasks.json
 
 # Restart the app - all data should be restored
 npm start

@@ -89,11 +89,11 @@ function updateTrayIcon() {
   
   const state = appData.timerState;
   let displayText = '';
-  let tooltip = '15-Minute Tracker';
+  let tooltip = 'FocusBar';
   
   if (state.sleeping) {
     displayText = 'Zzz';
-    tooltip = '15-Minute Tracker - Paused';
+    tooltip = 'FocusBar - Paused';
   } else if (state.running) {
     const remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
     const minutes = Math.floor(remaining / 60);
@@ -119,7 +119,7 @@ function updateTrayIcon() {
 function updateContextMenu() {
   const template = [
     {
-      label: '15-Minute Tracker',
+      label: 'FocusBar',
       enabled: false
     },
     { type: 'separator' },
@@ -335,7 +335,7 @@ ipcMain.handle('import-data-from-file', async () => {
 
 ipcMain.handle('export-data-to-file', async () => {
   const result = await dialog.showSaveDialog({
-    defaultPath: `15min-tracker-backup-${new Date().toISOString().split('T')[0]}.json`,
+    defaultPath: `focusbar-backup-${new Date().toISOString().split('T')[0]}.json`,
     filters: [{ name: 'JSON Files', extensions: ['json'] }]
   });
   
@@ -495,7 +495,7 @@ function openSettings() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    title: '15-Minute Tracker Settings',
+    title: 'FocusBar Settings',
     titleBarStyle: 'hiddenInset',
     vibrancy: 'under-window',
     skipTaskbar: true
@@ -539,7 +539,7 @@ function createTray() {
   
   const icon = nativeImage.createFromBuffer(svgBuffer);
   tray = new Tray(icon);
-  tray.setToolTip('15-Minute Tracker');
+  tray.setToolTip('FocusBar');
   
   tray.on('click', () => {
     if (window && window.isVisible()) {

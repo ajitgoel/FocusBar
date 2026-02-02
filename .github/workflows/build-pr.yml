@@ -1,0 +1,48 @@
+name: Build on Pull Request
+
+on:
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build macOS app (unsigned)
+      run: npm run build-mac
+      env:
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-build-pr
+        path: |
+          dist/*.dmg
+          dist/*.zip
+        retention-days: 7
+        
+    - name: Comment PR
+      uses: actions/github-script@v7
+      if: github.event_name == 'pull_request'
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '✅ Build successful! Check the Artifacts section in this workflow run to download the test build.'
+          })

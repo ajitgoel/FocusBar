@@ -1,18 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <svg width="22" height="22" viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg">
-  <!-- Template icon for macOS menu bar (monochrome, works with dark/light mode) -->
-  <circle cx="11" cy="11" r="10" fill="black"/>
-  <circle cx="11" cy="11" r="8" fill="none" stroke="black" stroke-width="1.5"/>
-  
-  <!-- Clock marks -->
-  <line x1="11" y1="3" x2="11" y2="5" stroke="black" stroke-width="1.5"/>
-  <line x1="19" y1="11" x2="17" y2="11" stroke="black" stroke-width="1.5"/>
-  <line x1="11" y1="19" x2="11" y2="17" stroke="black" stroke-width="1.5"/>
-  <line x1="3" y1="11" x2="5" y2="11" stroke="black" stroke-width="1.5"/>
-  
-  <!-- Clock hands -->
-  <line x1="11" y1="11" x2="16" y2="11" stroke="black" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="11" y1="11" x2="11" y2="5" stroke="black" stroke-width="1" stroke-linecap="round"/>
-  
-  <!-- Center dot -->
-  <circle cx="11" cy="11" r="1.5" fill="black"/>
+  <circle cx="11" cy="11" r="9" fill="black" fill-opacity="0.85"/>
+  <text x="11" y="15" text-anchor="middle" fill="white" font-family="-apple-system, sans-serif" font-size="10" font-weight="600">15</text>
 </svg>
