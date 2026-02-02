@@ -70,7 +70,7 @@ body {
 
 .btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-primary {
@@ -109,7 +109,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -128,7 +128,8 @@ body {
   text-align: center;
 }
 
-.input, .select {
+.input,
+.select {
   width: 100%;
   padding: 10px;
   border: 1px solid #ddd;
@@ -223,13 +224,17 @@ body {
 
 .edit-task {
   margin-left: 8px;
-  color: #999;
+  color: #666;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
 }
 
 .edit-task:hover {
   color: #2196F3;
+  background: #E3F2FD;
 }
 
 .textarea {
@@ -296,8 +301,32 @@ body {
 .selected-task {
   background: #E3F2FD;
   border-radius: 8px;
-  padding: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
   font-size: 12px;
+}
+
+.selected-task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.btn-icon-small {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #2196F3;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.btn-icon-small:hover {
+  background: rgba(33, 150, 243, 0.1);
 }
 
 .task-details-text {
@@ -307,8 +336,13 @@ body {
   color: #555;
   font-style: italic;
   white-space: pre-wrap;
-  max-height: 60px;
+  max-height: 80px;
   overflow-y: auto;
+  cursor: pointer;
+}
+
+.task-details-text:hover {
+  background: rgba(33, 150, 243, 0.05);
 }
 
 .hidden {

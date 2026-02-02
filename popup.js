@@ -32,6 +32,7 @@ const currentTaskName = document.getElementById('current-task-name');
 const currentTaskSessions = document.getElementById('current-task-sessions');
 const currentTaskMinutes = document.getElementById('current-task-minutes');
 const currentTaskDetails = document.getElementById('current-task-details');
+const btnEditSelectedTask = document.getElementById('btn-edit-selected-task');
 
 // Edit task modal elements
 const editTaskModal = document.getElementById('edit-task-modal');
@@ -56,17 +57,17 @@ async function init() {
   updateTimerDisplay();
   renderTasks();
   updateSelectedTaskInfo();
-  
+
   // Auto-start timer if not running
   if (!timerState.running && !timerState.checkinPending) {
     startTimer();
   }
-  
+
   // Check for pending check-in
   if (timerState.checkinPending) {
     showCheckinModal();
   }
-  
+
   // Start display update loop
   setInterval(updateTimerDisplay, 1000);
 }
@@ -102,9 +103,9 @@ function startTimer() {
   timerState.remaining = duration;
   timerState.endTime = Date.now() + duration * 1000;
   timerState.checkinPending = false;
-  
+
   chrome.alarms.create('timer-alarm', { delayInMinutes: duration / 60 });
-  
+
   updateTimerDisplay();
   updateStatusDisplay();
   saveTimerState();
@@ -112,7 +113,7 @@ function startTimer() {
 
 function toggleSleep() {
   timerState.sleeping = !timerState.sleeping;
-  
+
   if (timerState.sleeping) {
     if (timerState.endTime) {
       timerState.remaining = Math.max(0, Math.ceil((timerState.endTime - Date.now()) / 1000));
@@ -124,7 +125,7 @@ function toggleSleep() {
       chrome.alarms.create('timer-alarm', { delayInMinutes: timerState.remaining / 60 });
     }
   }
-  
+
   updateSleepButton();
   updateStatusDisplay();
   saveTimerState();
@@ -144,11 +145,11 @@ function showCheckinModal() {
     option.textContent = task.name;
     taskSelect.appendChild(option);
   });
-  
+
   if (timerState.selectedTaskId) {
     taskSelect.value = timerState.selectedTaskId;
   }
-  
+
   activityInput.value = '';
   checkinModal.classList.remove('hidden');
   timerState.checkinPending = true;
@@ -158,7 +159,7 @@ function showCheckinModal() {
 function submitCheckin() {
   const taskId = taskSelect.value;
   const activity = activityInput.value.trim();
-  
+
   if (taskId) {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
@@ -172,12 +173,12 @@ function submitCheckin() {
       timerState.selectedTaskId = taskId;
     }
   }
-  
+
   saveTasks();
   checkinModal.classList.add('hidden');
   timerState.checkinPending = false;
   timerState.isBreak = false;
-  
+
   startTimer();
   renderTasks();
   updateSelectedTaskInfo();
@@ -201,7 +202,7 @@ function addTask() {
     tasks.push(task);
     saveTasks();
     renderTasks();
-    
+
     newTaskInput.value = '';
     addTaskForm.classList.add('hidden');
   }
@@ -246,13 +247,21 @@ function editTask(taskId) {
 function saveEditedTask() {
   if (editingTaskId) {
     const task = tasks.find(t => t.id === editingTaskId);
+    const newName = editTaskName.value.trim();
+
+    if (!newName) {
+      alert('Task name cannot be empty');
+      return;
+    }
+
     if (task) {
-      task.name = editTaskName.value.trim();
+      task.name = newName;
       task.details = editTaskDetails.value.trim();
       saveTasks();
       renderTasks();
       updateSelectedTaskInfo();
     }
+
     editingTaskId = null;
     editTaskModal.classList.add('hidden');
   }
@@ -273,18 +282,18 @@ function showTaskDetails(taskId) {
 // UI Updates
 function updateTimerDisplay() {
   let remaining = timerState.remaining;
-  
+
   if (timerState.running && !timerState.sleeping && timerState.endTime) {
     remaining = Math.max(0, Math.ceil((timerState.endTime - Date.now()) / 1000));
   }
-  
+
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
   timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  
+
   chrome.action.setBadgeText({ text: `${minutes}m` });
   chrome.action.setBadgeBackgroundColor({ color: timerState.isBreak ? '#FF9800' : '#2196F3' });
-  
+
   timerDisplay.classList.toggle('paused', timerState.sleeping);
   timerDisplay.classList.toggle('break', timerState.isBreak);
 }
@@ -314,15 +323,20 @@ function updateSelectedTaskInfo() {
       currentTaskSessions.textContent = task.sessions || 0;
       const totalMinutes = task.logs ? task.logs.reduce((sum, log) => sum + (log.duration || 0), 0) : (task.sessions || 0) * 15;
       currentTaskMinutes.textContent = totalMinutes;
-      
+
       // Display task details if they exist
       if (task.details) {
         currentTaskDetails.textContent = task.details;
         currentTaskDetails.classList.remove('hidden');
+        currentTaskDetails.style.opacity = "1";
+        currentTaskDetails.title = "Click to edit details";
       } else {
-        currentTaskDetails.classList.add('hidden');
+        currentTaskDetails.textContent = "Click here to add notes or details...";
+        currentTaskDetails.classList.remove('hidden');
+        currentTaskDetails.style.opacity = "0.6";
+        currentTaskDetails.title = "Add details";
       }
-      
+
       selectedTaskInfo.classList.remove('hidden');
       return;
     }
@@ -332,11 +346,11 @@ function updateSelectedTaskInfo() {
 
 function renderTasks() {
   taskList.innerHTML = '';
-  
+
   tasks.forEach(task => {
     const li = document.createElement('li');
     li.className = `task-item ${task.id === timerState.selectedTaskId ? 'selected' : ''} ${task.completed ? 'completed' : ''}`;
-    
+
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'task-checkbox';
@@ -345,16 +359,16 @@ function renderTasks() {
       e.stopPropagation();
       toggleTaskComplete(task.id);
     });
-    
+
     const nameSpan = document.createElement('span');
     nameSpan.className = 'task-name';
     nameSpan.textContent = task.name;
-    
+
     const sessionsSpan = document.createElement('span');
     sessionsSpan.className = 'task-sessions';
     const totalMinutes = task.logs ? task.logs.reduce((sum, log) => sum + (log.duration || 0), 0) : 0;
     sessionsSpan.textContent = `${task.sessions || 0} ses · ${totalMinutes}m`;
-    
+
     // Add details indicator if task has details
     if (task.details) {
       const detailsIndicator = document.createElement('span');
@@ -363,7 +377,7 @@ function renderTasks() {
       detailsIndicator.title = 'Has details - click task to view';
       nameSpan.appendChild(detailsIndicator);
     }
-    
+
     const editBtn = document.createElement('span');
     editBtn.className = 'edit-task';
     editBtn.textContent = '✎';
@@ -372,7 +386,7 @@ function renderTasks() {
       e.stopPropagation();
       editTask(task.id);
     });
-    
+
     const deleteBtn = document.createElement('span');
     deleteBtn.className = 'delete-task';
     deleteBtn.textContent = '×';
@@ -380,15 +394,15 @@ function renderTasks() {
       e.stopPropagation();
       deleteTask(task.id);
     });
-    
+
     li.appendChild(checkbox);
     li.appendChild(nameSpan);
     li.appendChild(sessionsSpan);
     li.appendChild(editBtn);
     li.appendChild(deleteBtn);
-    
+
     li.addEventListener('click', () => selectTask(task.id));
-    
+
     taskList.appendChild(li);
   });
 }
@@ -400,34 +414,47 @@ function setupEventListeners() {
   btnSettings.addEventListener('click', () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
   });
-  
+
   btnCheckinSubmit.addEventListener('click', submitCheckin);
-  
+
   btnAddTask.addEventListener('click', () => {
     addTaskForm.classList.remove('hidden');
     newTaskInput.focus();
   });
-  
+
   btnSaveTask.addEventListener('click', addTask);
   btnCancelTask.addEventListener('click', () => {
     addTaskForm.classList.add('hidden');
     newTaskInput.value = '';
   });
-  
+
   newTaskInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') addTask();
   });
-  
+
   // Edit task modal listeners
   btnEditSave.addEventListener('click', saveEditedTask);
   btnEditCancel.addEventListener('click', cancelEditTask);
+
+  btnEditSelectedTask.addEventListener('click', () => {
+    if (timerState.selectedTaskId) {
+      editTask(timerState.selectedTaskId);
+    }
+  });
+
+  currentTaskDetails.addEventListener('click', () => {
+    if (timerState.selectedTaskId) {
+      editTask(timerState.selectedTaskId);
+    }
+  });
+
   editTaskName.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') saveEditedTask();
   });
   editTaskDetails.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && e.ctrlKey) saveEditedTask();
   });
-  
+
   // History toggle listener
   btnToggleHistory.addEventListener('click', toggleHistory);
 }
@@ -443,7 +470,7 @@ function toggleHistory() {
 
 function renderHistory() {
   historyList.innerHTML = '';
-  
+
   // Collect all logs from all tasks, sorted by timestamp (newest first)
   let allLogs = [];
   tasks.forEach(task => {
@@ -456,9 +483,9 @@ function renderHistory() {
       });
     }
   });
-  
+
   allLogs.sort((a, b) => b.timestamp - a.timestamp);
-  
+
   if (allLogs.length === 0) {
     const emptyMsg = document.createElement('div');
     emptyMsg.className = 'history-item';
@@ -468,31 +495,31 @@ function renderHistory() {
     historyList.appendChild(emptyMsg);
     return;
   }
-  
+
   // Show last 20 sessions
   allLogs.slice(0, 20).forEach(log => {
     const item = document.createElement('div');
     item.className = 'history-item';
-    
+
     const taskName = document.createElement('div');
     taskName.className = 'history-task-name';
     taskName.textContent = log.taskName;
-    
+
     const time = document.createElement('div');
     time.className = 'history-time';
     const date = new Date(log.timestamp);
-    time.textContent = `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} · ${log.duration} min`;
-    
+    time.textContent = `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · ${log.duration} min`;
+
     item.appendChild(taskName);
     item.appendChild(time);
-    
+
     if (log.activity) {
       const activity = document.createElement('div');
       activity.className = 'history-activity';
       activity.textContent = log.activity;
       item.appendChild(activity);
     }
-    
+
     historyList.appendChild(item);
   });
 }
