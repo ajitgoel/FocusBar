@@ -193,6 +193,16 @@ body {
   font-size: 13px;
 }
 
+.task-details-indicator {
+  margin-left: 6px;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.task-item:hover .task-details-indicator {
+  opacity: 1;
+}
+
 .task-sessions {
   font-size: 11px;
   color: #666;
@@ -211,11 +221,94 @@ body {
   color: #f44336;
 }
 
+.edit-task {
+  margin-left: 8px;
+  color: #999;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.edit-task:hover {
+  color: #2196F3;
+}
+
+.textarea {
+  min-height: 80px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.task-details-preview {
+  font-size: 11px;
+  color: #666;
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
+  cursor: pointer;
+}
+
+.task-details-preview:hover {
+  background: #e0e0e0;
+}
+
+.history-section {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.history-item {
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 12px;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-task-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.history-time {
+  color: #666;
+  font-size: 11px;
+}
+
+.history-activity {
+  color: #555;
+  margin-top: 2px;
+  font-style: italic;
+}
+
 .selected-task {
   background: #E3F2FD;
   border-radius: 8px;
   padding: 10px;
   font-size: 12px;
+}
+
+.task-details-text {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #BBDEFB;
+  color: #555;
+  font-style: italic;
+  white-space: pre-wrap;
+  max-height: 60px;
+  overflow-y: auto;
 }
 
 .hidden {

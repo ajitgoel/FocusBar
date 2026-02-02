@@ -48,6 +48,27 @@
     <div id="selected-task-info" class="selected-task hidden">
       <p>Working on: <strong id="current-task-name">None</strong></p>
       <p>Sessions: <span id="current-task-sessions">0</span> (Total: <span id="current-task-minutes">0</span> min)</p>
+      <p id="current-task-details" class="task-details-text hidden"></p>
+    </div>
+
+    <div class="history-section" id="history-section">
+      <div class="section-header">
+        <h2>Session History</h2>
+        <button id="btn-toggle-history" class="btn btn-small">Show</button>
+      </div>
+      <div id="history-list" class="hidden"></div>
+    </div>
+
+    <div id="edit-task-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Edit Task</h3>
+        <input type="text" id="edit-task-name" class="input" placeholder="Task name..." />
+        <textarea id="edit-task-details" class="input textarea" placeholder="Add more details about this task..."></textarea>
+        <div class="modal-actions">
+          <button id="btn-edit-save" class="btn btn-primary">Save</button>
+          <button id="btn-edit-cancel" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
     </div>
   </div>
 

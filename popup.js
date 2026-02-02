@@ -31,6 +31,22 @@ const selectedTaskInfo = document.getElementById('selected-task-info');
 const currentTaskName = document.getElementById('current-task-name');
 const currentTaskSessions = document.getElementById('current-task-sessions');
 const currentTaskMinutes = document.getElementById('current-task-minutes');
+const currentTaskDetails = document.getElementById('current-task-details');
+
+// Edit task modal elements
+const editTaskModal = document.getElementById('edit-task-modal');
+const editTaskName = document.getElementById('edit-task-name');
+const editTaskDetails = document.getElementById('edit-task-details');
+const btnEditSave = document.getElementById('btn-edit-save');
+const btnEditCancel = document.getElementById('btn-edit-cancel');
+
+let editingTaskId = null;
+
+// History section elements
+const historySection = document.getElementById('history-section');
+const historyList = document.getElementById('history-list');
+const btnToggleHistory = document.getElementById('btn-toggle-history');
+let historyVisible = false;
 
 // Initialize
 async function init() {
@@ -165,6 +181,9 @@ function submitCheckin() {
   startTimer();
   renderTasks();
   updateSelectedTaskInfo();
+  if (historyVisible) {
+    renderHistory();
+  }
 }
 
 // Task management
@@ -214,6 +233,43 @@ function deleteTask(taskId) {
   updateSelectedTaskInfo();
 }
 
+function editTask(taskId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (task) {
+    editingTaskId = taskId;
+    editTaskName.value = task.name;
+    editTaskDetails.value = task.details || '';
+    editTaskModal.classList.remove('hidden');
+  }
+}
+
+function saveEditedTask() {
+  if (editingTaskId) {
+    const task = tasks.find(t => t.id === editingTaskId);
+    if (task) {
+      task.name = editTaskName.value.trim();
+      task.details = editTaskDetails.value.trim();
+      saveTasks();
+      renderTasks();
+      updateSelectedTaskInfo();
+    }
+    editingTaskId = null;
+    editTaskModal.classList.add('hidden');
+  }
+}
+
+function cancelEditTask() {
+  editingTaskId = null;
+  editTaskModal.classList.add('hidden');
+}
+
+function showTaskDetails(taskId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (task && task.details) {
+    alert(`Task: ${task.name}\n\nDetails:\n${task.details}`);
+  }
+}
+
 // UI Updates
 function updateTimerDisplay() {
   let remaining = timerState.remaining;
@@ -256,7 +312,17 @@ function updateSelectedTaskInfo() {
     if (task) {
       currentTaskName.textContent = task.name;
       currentTaskSessions.textContent = task.sessions || 0;
-      currentTaskMinutes.textContent = (task.sessions || 0) * 15;
+      const totalMinutes = task.logs ? task.logs.reduce((sum, log) => sum + (log.duration || 0), 0) : (task.sessions || 0) * 15;
+      currentTaskMinutes.textContent = totalMinutes;
+      
+      // Display task details if they exist
+      if (task.details) {
+        currentTaskDetails.textContent = task.details;
+        currentTaskDetails.classList.remove('hidden');
+      } else {
+        currentTaskDetails.classList.add('hidden');
+      }
+      
       selectedTaskInfo.classList.remove('hidden');
       return;
     }
@@ -286,7 +352,26 @@ function renderTasks() {
     
     const sessionsSpan = document.createElement('span');
     sessionsSpan.className = 'task-sessions';
-    sessionsSpan.textContent = `${task.sessions || 0} sessions`;
+    const totalMinutes = task.logs ? task.logs.reduce((sum, log) => sum + (log.duration || 0), 0) : 0;
+    sessionsSpan.textContent = `${task.sessions || 0} ses · ${totalMinutes}m`;
+    
+    // Add details indicator if task has details
+    if (task.details) {
+      const detailsIndicator = document.createElement('span');
+      detailsIndicator.className = 'task-details-indicator';
+      detailsIndicator.textContent = '📝';
+      detailsIndicator.title = 'Has details - click task to view';
+      nameSpan.appendChild(detailsIndicator);
+    }
+    
+    const editBtn = document.createElement('span');
+    editBtn.className = 'edit-task';
+    editBtn.textContent = '✎';
+    editBtn.title = task.details ? 'Edit task & details' : 'Edit task';
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      editTask(task.id);
+    });
     
     const deleteBtn = document.createElement('span');
     deleteBtn.className = 'delete-task';
@@ -299,6 +384,7 @@ function renderTasks() {
     li.appendChild(checkbox);
     li.appendChild(nameSpan);
     li.appendChild(sessionsSpan);
+    li.appendChild(editBtn);
     li.appendChild(deleteBtn);
     
     li.addEventListener('click', () => selectTask(task.id));
@@ -330,6 +416,84 @@ function setupEventListeners() {
   
   newTaskInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') addTask();
+  });
+  
+  // Edit task modal listeners
+  btnEditSave.addEventListener('click', saveEditedTask);
+  btnEditCancel.addEventListener('click', cancelEditTask);
+  editTaskName.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') saveEditedTask();
+  });
+  editTaskDetails.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) saveEditedTask();
+  });
+  
+  // History toggle listener
+  btnToggleHistory.addEventListener('click', toggleHistory);
+}
+
+function toggleHistory() {
+  historyVisible = !historyVisible;
+  btnToggleHistory.textContent = historyVisible ? 'Hide' : 'Show';
+  historyList.classList.toggle('hidden', !historyVisible);
+  if (historyVisible) {
+    renderHistory();
+  }
+}
+
+function renderHistory() {
+  historyList.innerHTML = '';
+  
+  // Collect all logs from all tasks, sorted by timestamp (newest first)
+  let allLogs = [];
+  tasks.forEach(task => {
+    if (task.logs && task.logs.length > 0) {
+      task.logs.forEach(log => {
+        allLogs.push({
+          ...log,
+          taskName: task.name
+        });
+      });
+    }
+  });
+  
+  allLogs.sort((a, b) => b.timestamp - a.timestamp);
+  
+  if (allLogs.length === 0) {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.className = 'history-item';
+    emptyMsg.textContent = 'No sessions recorded yet. Complete a session to see history.';
+    emptyMsg.style.color = '#999';
+    emptyMsg.style.fontStyle = 'italic';
+    historyList.appendChild(emptyMsg);
+    return;
+  }
+  
+  // Show last 20 sessions
+  allLogs.slice(0, 20).forEach(log => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    
+    const taskName = document.createElement('div');
+    taskName.className = 'history-task-name';
+    taskName.textContent = log.taskName;
+    
+    const time = document.createElement('div');
+    time.className = 'history-time';
+    const date = new Date(log.timestamp);
+    time.textContent = `${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} · ${log.duration} min`;
+    
+    item.appendChild(taskName);
+    item.appendChild(time);
+    
+    if (log.activity) {
+      const activity = document.createElement('div');
+      activity.className = 'history-activity';
+      activity.textContent = log.activity;
+      item.appendChild(activity);
+    }
+    
+    historyList.appendChild(item);
   });
 }
 
