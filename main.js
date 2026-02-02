@@ -2,6 +2,12 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen, dialog } =
 const path = require('path');
 const fs = require('fs');
 
+// Hide dock icon immediately on macOS (before app is ready)
+if (process.platform === 'darwin') {
+  app.dock.hide();
+  app.setActivationPolicy('accessory'); // Prevents dock icon from showing
+}
+
 // Global variables
 let tray = null;
 let window = null;
@@ -369,16 +375,40 @@ ipcMain.handle('clear-data', () => {
 ipcMain.handle('open-settings', () => openSettings());
 
 // Window management
+// Generate app icon for windows
+function getAppIcon() {
+  const svgBuffer = Buffer.from(`
+    <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#007AFF"/>
+          <stop offset="100%" style="stop-color:#0051D5"/>
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="120" fill="url(#bgGrad)"/>
+      <circle cx="256" cy="256" r="180" fill="white" opacity="0.95"/>
+      <circle cx="256" cy="256" r="160" fill="none" stroke="#007AFF" stroke-width="8" opacity="0.2"/>
+      <line x1="256" y1="256" x2="400" y2="256" stroke="#007AFF" stroke-width="24" stroke-linecap="round"/>
+      <line x1="256" y1="256" x2="256" y2="100" stroke="#007AFF" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="256" cy="256" r="24" fill="#007AFF"/>
+    </svg>
+  `);
+  return nativeImage.createFromBuffer(svgBuffer);
+}
+
 function createWindow() {
   if (window && !window.isDestroyed()) {
     window.focus();
     return;
   }
   
+  const appIcon = getAppIcon();
+  
   window = new BrowserWindow({
     width: 420,
     height: 750,
     show: false,
+    icon: appIcon,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -392,7 +422,8 @@ function createWindow() {
     roundedCorners: true,
     minimizable: false,
     maximizable: false,
-    fullscreenable: false
+    fullscreenable: false,
+    skipTaskbar: true // Hide from taskbar on Windows
   });
   
   window.loadFile('index.html');
@@ -453,9 +484,12 @@ function openSettings() {
     return;
   }
   
+  const appIcon = getAppIcon();
+  
   settingsWindow = new BrowserWindow({
     width: 700,
     height: 600,
+    icon: appIcon,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -463,7 +497,8 @@ function openSettings() {
     },
     title: '15-Minute Tracker Settings',
     titleBarStyle: 'hiddenInset',
-    vibrancy: 'under-window'
+    vibrancy: 'under-window',
+    skipTaskbar: true
   });
   
   settingsWindow.loadFile('settings.html');
@@ -474,10 +509,31 @@ function openSettings() {
 
 // Create tray
 function createTray() {
+  // Create a nice clock/timer icon for menu bar
   const svgBuffer = Buffer.from(`
     <svg width="22" height="22" viewBox="0 0 22 22" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="11" cy="11" r="10" fill="#007aff"/>
-      <text x="11" y="15" text-anchor="middle" fill="white" font-family="-apple-system" font-size="10" font-weight="600">15</text>
+      <defs>
+        <linearGradient id="trayGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#007AFF"/>
+          <stop offset="100%" style="stop-color:#0051D5"/>
+        </linearGradient>
+      </defs>
+      <circle cx="11" cy="11" r="10" fill="url(#trayGrad)"/>
+      <circle cx="11" cy="11" r="8" fill="white" opacity="0.9"/>
+      <circle cx="11" cy="11" r="7" fill="none" stroke="#007AFF" stroke-width="0.8" opacity="0.3"/>
+      
+      <!-- Clock marks -->
+      <line x1="11" y1="4.5" x2="11" y2="5.5" stroke="#007AFF" stroke-width="1"/>
+      <line x1="17.5" y1="11" x2="16.5" y2="11" stroke="#007AFF" stroke-width="1"/>
+      <line x1="11" y1="17.5" x2="11" y2="16.5" stroke="#007AFF" stroke-width="1"/>
+      <line x1="4.5" y1="11" x2="5.5" y2="11" stroke="#007AFF" stroke-width="1"/>
+      
+      <!-- Clock hands showing 3:00 -->
+      <line x1="11" y1="11" x2="15" y2="11" stroke="#007AFF" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="11" y1="11" x2="11" y2="6" stroke="#007AFF" stroke-width="1" stroke-linecap="round"/>
+      
+      <!-- Center dot -->
+      <circle cx="11" cy="11" r="1.2" fill="#007AFF"/>
     </svg>
   `);
   
@@ -504,6 +560,35 @@ function createTray() {
 // App lifecycle
 app.whenReady().then(() => {
   console.log('App ready - initializing...');
+  
+  // Hide from dock (menu bar app only)
+  if (process.platform === 'darwin') {
+    app.dock.hide();
+  }
+  
+  // Set app icon
+  const svgIconBuffer = Buffer.from(`
+    <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:#007AFF"/>
+          <stop offset="100%" style="stop-color:#0051D5"/>
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="120" fill="url(#bgGrad)"/>
+      <circle cx="256" cy="256" r="180" fill="white" opacity="0.95"/>
+      <circle cx="256" cy="256" r="160" fill="none" stroke="#007AFF" stroke-width="8" opacity="0.2"/>
+      <line x1="256" y1="256" x2="400" y2="256" stroke="#007AFF" stroke-width="24" stroke-linecap="round"/>
+      <line x1="256" y1="256" x2="256" y2="100" stroke="#007AFF" stroke-width="16" stroke-linecap="round"/>
+      <circle cx="256" cy="256" r="24" fill="#007AFF"/>
+    </svg>
+  `);
+  const appIcon = nativeImage.createFromBuffer(svgIconBuffer);
+  
+  // On macOS, set the app icon
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setIcon(appIcon);
+  }
   
   // Load data from file
   const loaded = loadDataFromFile();
@@ -537,8 +622,28 @@ app.on('window-all-closed', (e) => {
 });
 
 app.on('before-quit', () => {
+  console.log('App quitting - saving data...');
   stopTimerInterval();
+  const saved = saveDataToFile();
+  console.log('Data saved on quit:', saved);
+});
+
+app.on('will-quit', () => {
+  console.log('App will quit - final save...');
   saveDataToFile();
+});
+
+// Handle SIGTERM and SIGINT for graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received - saving data...');
+  saveDataToFile();
+  app.quit();
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received - saving data...');
+  saveDataToFile();
+  app.quit();
 });
 
 // Single instance

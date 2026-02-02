@@ -71,6 +71,13 @@
       "output": "dist",
       "buildResources": "build"
     },
+    "electronDist": "node_modules/electron/dist",
+    "extraResources": [
+      {
+        "from": "icons/",
+        "to": "icons/"
+      }
+    ],
     "files": [
       "main.js",
       "preload.js",
@@ -107,7 +114,11 @@
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "LSUIElement": true,
+        "LSBackgroundOnly": false
+      }
     },
     "dmg": {
       "title": "15-Minute Tracker",
