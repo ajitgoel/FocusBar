@@ -1,0 +1,57 @@
+{
+  "exportDate": "2024-01-15T10:30:00.000Z",
+  "version": "1.0.0",
+  "groups": [
+    {
+      "id": "group_work",
+      "name": "Work",
+      "color": "#34c759"
+    },
+    {
+      "id": "group_personal",
+      "name": "Personal",
+      "color": "#ff9500"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "1705312800000",
+      "name": "Review quarterly report",
+      "sessions": 2,
+      "completed": false,
+      "groupId": "group_work",
+      "logs": [
+        {
+          "timestamp": 1705312800000,
+          "activity": "Drafted initial analysis",
+          "duration": 15
+        }
+      ],
+      "createdAt": 1705312800000
+    },
+    {
+      "id": "1705312900000",
+      "name": "Update project documentation",
+      "sessions": 0,
+      "completed": false,
+      "groupId": "group_work",
+      "logs": [],
+      "createdAt": 1705312900000
+    },
+    {
+      "id": "1705313000000",
+      "name": "Grocery shopping list",
+      "sessions": 1,
+      "completed": false,
+      "groupId": "group_personal",
+      "logs": [
+        {
+          "timestamp": 1705313100000,
+          "activity": "Created shopping list",
+          "duration": 15
+        }
+      ],
+      "createdAt": 1705313000000
+    }
+  ]
+}

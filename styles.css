@@ -551,6 +551,52 @@ body {
   color: #007aff;
 }
 
+/* Task Start/Stop Buttons */
+.task-action-btn {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: all 0.15s ease;
+  margin-right: 4px;
+}
+
+.task-item:hover .task-action-btn {
+  opacity: 1;
+}
+
+.task-action-btn.btn-start {
+  background: #34c759;
+  color: white;
+}
+
+.task-action-btn.btn-start:hover {
+  background: #30b350;
+}
+
+.task-action-btn.btn-stop {
+  background: #ff3b30;
+  color: white;
+}
+
+.task-action-btn.btn-stop:hover {
+  background: #e6342b;
+}
+
+.task-item.active-task {
+  background: rgba(0, 122, 255, 0.08);
+  border-left: 3px solid #007aff;
+}
+
+.task-item.active-task .task-action-btn {
+  opacity: 1;
+}
+
 /* Selected Task Info */
 .selected-task-info {
   padding: 16px 20px;

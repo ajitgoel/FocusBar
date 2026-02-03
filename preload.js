@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Tasks
   getTasks: () => ipcRenderer.invoke('get-tasks'),
   saveTasks: (tasks) => ipcRenderer.invoke('save-tasks', tasks),
+  startTask: (taskId) => ipcRenderer.invoke('start-task', taskId),
+  stopTask: (taskId) => ipcRenderer.invoke('stop-task', taskId),
+  getActiveTask: () => ipcRenderer.invoke('get-active-task'),
   
   // Groups
   getGroups: () => ipcRenderer.invoke('get-groups'),
@@ -33,5 +36,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Events
   onTimerUpdate: (callback) => ipcRenderer.on('timer-updated', callback),
   onTimerComplete: (callback) => ipcRenderer.on('timer-complete', callback),
+  onTaskUpdate: (callback) => ipcRenderer.on('task-updated', callback),
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel)
 });

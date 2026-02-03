@@ -7,7 +7,8 @@ let timerState = {
   endTime: null,
   remaining: 15 * 60,
   selectedTaskId: null,
-  checkinPending: false
+  checkinPending: false,
+  activeTaskId: null
 };
 
 let tasks = [];
@@ -191,6 +192,16 @@ function setupIPCListeners() {
     updateStatusBadge();
     showCheckinModal();
   });
+
+  // Listen for task updates from main process
+  if (window.electronAPI.onTaskUpdate) {
+    window.electronAPI.onTaskUpdate((event, newTasks) => {
+      tasks = newTasks;
+      renderTasks();
+      updateStatusBadge();
+      updateSelectedTaskInfo();
+    });
+  }
 }
 
 // Timer display update
@@ -214,18 +225,22 @@ function updateTimerDisplay() {
 function updateStatusBadge() {
   let status = 'Ready';
   let className = '';
+  const activeTask = tasks.find(t => t.id === timerState.activeTaskId);
 
   if (timerState.sleeping) {
-    status = 'Paused';
+    status = activeTask ? `Paused: ${activeTask.name}` : 'Paused';
     className = 'paused';
   } else if (timerState.isBreak) {
     status = 'On Break';
     className = 'break';
+  } else if (timerState.running && activeTask) {
+    status = activeTask.name;
+    className = 'active';
   } else if (timerState.running) {
     status = 'Focusing';
     className = 'active';
   } else if (timerState.checkinPending) {
-    status = 'Check-in';
+    status = activeTask ? `${activeTask.name} - Check-in` : 'Check-in';
   }
 
   statusBadge.textContent = status;
@@ -411,9 +426,33 @@ async function toggleTaskComplete(taskId) {
   const task = tasks.find(t => t.id === taskId);
   if (task) {
     task.completed = !task.completed;
+    // Stop task if it was running
+    if (task.isRunning) {
+      task.isRunning = false;
+      timerState.activeTaskId = null;
+      await window.electronAPI.saveTimerState(timerState);
+    }
     await window.electronAPI.saveTasks(tasks);
     renderTasks();
+    updateStatusBadge();
   }
+}
+
+// Start/stop task timer
+async function startTask(taskId) {
+  await window.electronAPI.startTask(taskId);
+  timerState.activeTaskId = taskId;
+  timerState.selectedTaskId = taskId;
+  renderTasks();
+  updateStatusBadge();
+  updateSelectedTaskInfo();
+}
+
+async function stopTask(taskId) {
+  await window.electronAPI.stopTask(taskId);
+  timerState.activeTaskId = null;
+  renderTasks();
+  updateStatusBadge();
 }
 
 async function selectTask(taskId) {
@@ -667,7 +706,8 @@ function renderTasks() {
 
 function createTaskElement(task) {
   const li = document.createElement('li');
-  li.className = `task-item ${task.id === timerState.selectedTaskId ? 'selected' : ''} ${task.completed ? 'completed' : ''}`;
+  const isActive = task.id === timerState.activeTaskId;
+  li.className = `task-item ${task.id === timerState.selectedTaskId ? 'selected' : ''} ${task.completed ? 'completed' : ''} ${isActive ? 'active-task' : ''}`;
 
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
@@ -687,10 +727,25 @@ function createTaskElement(task) {
 
   const meta = document.createElement('div');
   meta.className = 'task-meta';
-  meta.textContent = `${task.sessions || 0} sessions • ${(task.sessions || 0) * 15} min`;
+  const sessionDuration = Math.floor((task.currentSessionDuration || 0) / 60);
+  meta.textContent = `${task.sessions || 0} sessions • ${(task.sessions || 0) * 15} min • Current: ${sessionDuration} min`;
 
   content.appendChild(name);
   content.appendChild(meta);
+
+  // Start/Stop button
+  const startStopBtn = document.createElement('button');
+  startStopBtn.className = `task-action-btn ${isActive ? 'btn-stop' : 'btn-start'}`;
+  startStopBtn.textContent = isActive ? 'Stop' : 'Start';
+  startStopBtn.title = isActive ? 'Stop tracking' : 'Start tracking';
+  startStopBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (isActive) {
+      stopTask(task.id);
+    } else {
+      startTask(task.id);
+    }
+  });
 
   const deleteBtn = document.createElement('div');
   deleteBtn.className = 'task-delete';
@@ -709,6 +764,7 @@ function createTaskElement(task) {
 
   li.appendChild(checkbox);
   li.appendChild(content);
+  li.appendChild(startStopBtn);
   li.appendChild(editBtn);
   li.appendChild(deleteBtn);
   li.addEventListener('click', () => selectTask(task.id));
@@ -724,4 +780,5 @@ window.addEventListener('beforeunload', () => {
   if (updateInterval) clearInterval(updateInterval);
   window.electronAPI.removeAllListeners('timer-updated');
   window.electronAPI.removeAllListeners('timer-complete');
+  window.electronAPI.removeAllListeners('task-updated');
 });

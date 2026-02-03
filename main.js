@@ -30,7 +30,8 @@ let appData = {
     remaining: 15 * 60,
     selectedTaskId: null,
     checkinPending: false,
-    lastSessionDate: null
+    lastSessionDate: null,
+    activeTaskId: null
   }
 };
 
@@ -88,24 +89,35 @@ function updateTrayIcon() {
   if (!tray) return;
   
   const state = appData.timerState;
+  const activeTask = getActiveTask();
   let displayText = '';
   let tooltip = 'FocusBar';
   
   if (state.sleeping) {
     displayText = 'Zzz';
-    tooltip = 'FocusBar - Paused';
+    tooltip = activeTask 
+      ? `Paused - ${activeTask.name} (${Math.floor(activeTask.currentSessionDuration / 60 || 0)} min)`
+      : 'FocusBar - Paused';
   } else if (state.running) {
     const remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
     const minutes = Math.floor(remaining / 60);
     displayText = minutes > 99 ? '99+' : minutes.toString();
     const statusText = state.isBreak ? 'Break' : 'Focus';
-    tooltip = `${statusText} - ${minutes} min remaining`;
+    if (activeTask && !state.isBreak) {
+      tooltip = `${activeTask.name} - ${minutes} min remaining`;
+    } else {
+      tooltip = `${statusText} - ${minutes} min remaining`;
+    }
   } else if (state.checkinPending) {
     displayText = '!';
-    tooltip = 'Session complete - Log your work';
+    tooltip = activeTask 
+      ? `${activeTask.name} complete - Log your work`
+      : 'Session complete - Log your work';
   } else {
     displayText = '15';
-    tooltip = 'Ready to focus';
+    tooltip = activeTask 
+      ? `${activeTask.name} - Ready to focus`
+      : 'Ready to focus';
   }
   
   if (process.platform === 'darwin') {
@@ -155,6 +167,14 @@ function updateContextMenu() {
 // Timer functions
 function startTimer(isBreak = false) {
   const duration = isBreak ? BREAK_DURATION : WORK_DURATION;
+  
+  // If coming back from break and there's an active task, resume it
+  const activeTask = getActiveTask();
+  if (!isBreak && activeTask && !activeTask.isRunning) {
+    activeTask.isRunning = true;
+    activeTask.sessionStartTime = Date.now();
+  }
+  
   appData.timerState = {
     ...appData.timerState,
     running: true,
@@ -172,22 +192,35 @@ function startTimer(isBreak = false) {
   
   if (window && !window.isDestroyed()) {
     window.webContents.send('timer-updated', appData.timerState);
+    window.webContents.send('task-updated', appData.tasks);
   }
 }
 
 function toggleSleep() {
   const state = appData.timerState;
   state.sleeping = !state.sleeping;
+  const activeTask = getActiveTask();
   
   if (state.sleeping) {
     if (state.endTime) {
       state.remaining = Math.max(0, Math.ceil((state.endTime - Date.now()) / 1000));
     }
     stopTimerInterval();
+    // Pause task timer
+    if (activeTask) {
+      const elapsed = Math.floor((Date.now() - activeTask.sessionStartTime) / 1000);
+      activeTask.currentSessionDuration = (activeTask.currentSessionDuration || 0) + elapsed;
+      activeTask.isRunning = false;
+    }
   } else {
     if (state.running && state.remaining > 0) {
       state.endTime = Date.now() + state.remaining * 1000;
       startTimerInterval();
+      // Resume task timer
+      if (activeTask) {
+        activeTask.isRunning = true;
+        activeTask.sessionStartTime = Date.now();
+      }
     }
   }
   
@@ -196,11 +229,26 @@ function toggleSleep() {
   
   if (window && !window.isDestroyed()) {
     window.webContents.send('timer-updated', state);
+    window.webContents.send('task-updated', appData.tasks);
   }
 }
 
 function startBreak() {
+  // Pause the active task timer when starting a break
+  const activeTask = getActiveTask();
+  if (activeTask && activeTask.isRunning) {
+    const elapsed = Math.floor((Date.now() - activeTask.sessionStartTime) / 1000);
+    activeTask.currentSessionDuration = (activeTask.currentSessionDuration || 0) + elapsed;
+    activeTask.isRunning = false;
+    // Keep activeTaskId but mark task as not running
+  }
+  
   startTimer(true);
+  
+  // Notify renderer about task update
+  if (window && !window.isDestroyed()) {
+    window.webContents.send('task-updated', appData.tasks);
+  }
 }
 
 function startTimerInterval() {
@@ -231,6 +279,17 @@ function timerComplete() {
   state.checkinPending = true;
   state.remaining = 0;
   stopTimerInterval();
+  
+  // Stop the active task timer when session completes
+  const activeTask = getActiveTask();
+  if (activeTask) {
+    const elapsed = Math.floor((Date.now() - activeTask.sessionStartTime) / 1000);
+    activeTask.currentSessionDuration = (activeTask.currentSessionDuration || 0) + elapsed;
+    activeTask.isRunning = false;
+    activeTask.sessionStartTime = null;
+    state.activeTaskId = null;
+  }
+  
   saveDataToFile();
   updateTrayIcon();
   
@@ -280,6 +339,7 @@ ipcMain.handle('submit-checkin', (event, data) => {
       activity: data.activity,
       duration: appData.timerState.isBreak ? 5 : 15
     });
+    task.currentSessionDuration = 0; // Reset session duration after checkin
     appData.timerState.selectedTaskId = data.taskId;
   }
   
@@ -366,10 +426,92 @@ ipcMain.handle('clear-data', () => {
     endTime: null,
     remaining: WORK_DURATION,
     selectedTaskId: null,
-    checkinPending: false
+    checkinPending: false,
+    activeTaskId: null
   };
   saveDataToFile();
   updateTrayIcon();
+});
+
+// Task timer functions
+function startTaskTimer(taskId) {
+  const task = appData.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  
+  // Stop any currently running task
+  stopAllTaskTimers();
+  
+  // Start the new task
+  task.isRunning = true;
+  task.sessionStartTime = Date.now();
+  appData.timerState.activeTaskId = taskId;
+  appData.timerState.selectedTaskId = taskId;
+  
+  // Also start the main 15-min timer
+  if (!appData.timerState.running) {
+    startTimer(false);
+  }
+  
+  saveDataToFile();
+  
+  // Notify renderer
+  if (window && !window.isDestroyed()) {
+    window.webContents.send('task-updated', appData.tasks);
+  }
+}
+
+function stopTaskTimer(taskId) {
+  const task = appData.tasks.find(t => t.id === taskId);
+  if (!task || !task.isRunning) return;
+  
+  // Calculate elapsed time
+  const elapsed = Math.floor((Date.now() - task.sessionStartTime) / 1000);
+  task.currentSessionDuration = (task.currentSessionDuration || 0) + elapsed;
+  task.isRunning = false;
+  task.sessionStartTime = null;
+  
+  if (appData.timerState.activeTaskId === taskId) {
+    appData.timerState.activeTaskId = null;
+  }
+  
+  saveDataToFile();
+  
+  // Notify renderer
+  if (window && !window.isDestroyed()) {
+    window.webContents.send('task-updated', appData.tasks);
+  }
+}
+
+function stopAllTaskTimers() {
+  appData.tasks.forEach(task => {
+    if (task.isRunning) {
+      const elapsed = Math.floor((Date.now() - task.sessionStartTime) / 1000);
+      task.currentSessionDuration = (task.currentSessionDuration || 0) + elapsed;
+      task.isRunning = false;
+      task.sessionStartTime = null;
+    }
+  });
+  appData.timerState.activeTaskId = null;
+  saveDataToFile();
+}
+
+function getActiveTask() {
+  return appData.tasks.find(t => t.id === appData.timerState.activeTaskId);
+}
+
+// IPC handlers for task timers
+ipcMain.handle('start-task', (event, taskId) => {
+  startTaskTimer(taskId);
+  return { success: true };
+});
+
+ipcMain.handle('stop-task', (event, taskId) => {
+  stopTaskTimer(taskId);
+  return { success: true };
+});
+
+ipcMain.handle('get-active-task', () => {
+  return getActiveTask();
 });
 
 ipcMain.handle('open-settings', () => openSettings());
@@ -607,7 +749,18 @@ app.whenReady().then(() => {
     updateTrayIcon();
   } else {
     console.log('Starting fresh timer...');
-    setTimeout(() => startTimer(false), 500);
+    // Auto-start timer on app launch with first incomplete task or create default
+    setTimeout(() => {
+      // Find first incomplete task to auto-start
+      const incompleteTask = appData.tasks.find(t => !t.completed);
+      if (incompleteTask) {
+        console.log('Auto-starting with task:', incompleteTask.name);
+        startTaskTimer(incompleteTask.id);
+      } else {
+        console.log('No incomplete tasks found, starting timer without task');
+        startTimer(false);
+      }
+    }, 500);
   }
   
   app.on('activate', () => {
@@ -622,14 +775,17 @@ app.on('window-all-closed', (e) => {
 });
 
 app.on('before-quit', () => {
-  console.log('App quitting - saving data...');
+  console.log('App quitting - saving data and stopping tasks...');
   stopTimerInterval();
+  // Stop all task timers and save their session time
+  stopAllTaskTimers();
   const saved = saveDataToFile();
   console.log('Data saved on quit:', saved);
 });
 
 app.on('will-quit', () => {
   console.log('App will quit - final save...');
+  stopAllTaskTimers();
   saveDataToFile();
 });
 
